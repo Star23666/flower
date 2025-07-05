@@ -1,6 +1,18 @@
 <template>
   <div id="app">
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <!-- 只要不是登录页才显示导航栏 -->
+    <!--
+      一个 Bootstrap 导航栏，它在不是登录/注册/商家登录页时显示。
+      导航栏包含以下链接：
+      - 主页
+      - 商品
+      - 购物车
+      - 如果用户未登录，显示登录和注册链接
+      - 如果用户是商家，显示添加商品链接
+      - 如果用户已经登录，显示退出登录链接
+    -->
+    <nav v-if="!isLoginPage" class="navbar navbar-expand-lg navbar-light bg-light">
+      <!-- 你的导航栏内容 -->
       <div class="container">
         <router-link class="navbar-brand" to="/">鲜花商店</router-link>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,17 +55,22 @@
 </template>
 
 <script>
+
 export default {
   name: 'AppMain',
   computed: {
-  user() {
-    // 优先从 Vuex 取，没有就从 localStorage 取
-    return this.$store.state.user || JSON.parse(localStorage.getItem('user') || 'null');
+    user() {
+      return this.$store.state.user || JSON.parse(localStorage.getItem('user') || 'null');
+    },
+    cartCount() {
+      return this.$store.state.cart.reduce((total, item) => total + item.quantity, 0);
+    },
+    // 新增：判断当前路由是否为登录/注册/商家登录页
+    isLoginPage() {
+      const loginPages = ['/', '/login', '/register', '/seller/login']
+      return loginPages.includes(this.$route.path)
+    }
   },
-  cartCount() {
-    return this.$store.state.cart.reduce((total, item) => total + item.quantity, 0);
-  }
-},
   methods: {
     logout() {
       this.$store.commit('setUser', null);
