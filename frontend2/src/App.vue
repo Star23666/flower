@@ -20,6 +20,12 @@
             <li class="nav-item" v-if="!user">
               <router-link class="nav-link" to="/login">Login</router-link>
             </li>
+            <li class="nav-item" v-if="user && user.role === 'seller'">
+              <router-link class="nav-link" to="/add-product">Add Product</router-link>
+            </li>
+            <li class="nav-item" v-if="!user">
+              <router-link class="nav-link" to="/seller/login">Seller Login</router-link>
+            </li>
             <li class="nav-item" v-if="!user">
               <router-link class="nav-link" to="/register">Register</router-link>
             </li>
@@ -40,17 +46,19 @@
 export default {
   name: 'AppMain',
   computed: {
-    user() {
-      return this.$store.state.user;
-    },
-    cartCount() {
-      return this.$store.state.cart.reduce((total, item) => total + item.quantity, 0);
-    }
+  user() {
+    // 优先从 Vuex 取，没有就从 localStorage 取
+    return this.$store.state.user || JSON.parse(localStorage.getItem('user') || 'null');
   },
+  cartCount() {
+    return this.$store.state.cart.reduce((total, item) => total + item.quantity, 0);
+  }
+},
   methods: {
     logout() {
       this.$store.commit('setUser', null);
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       this.$router.push('/login');
     }
   }
