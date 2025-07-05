@@ -1,6 +1,6 @@
 <template>
   <div class="container">
-    <h2>Products</h2>
+    <h2>商品名称</h2>
     <div class="row">
       <div v-for="product in products" :key="product.id" class="col-md-4">
         <div class="card">
@@ -8,7 +8,7 @@
           <div class="card-body">
             <h5 class="card-title">{{ product.name }}</h5>
             <p class="card-text">${{ product.price }}</p>
-            <button class="btn btn-primary" @click="addToCart(product)">Add to Cart</button>
+            <button class="btn btn-primary" @click="addToCart(product)">加入购物车</button>
           </div>
         </div>
       </div>

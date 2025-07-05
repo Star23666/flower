@@ -1,20 +1,20 @@
 <template>
     <div class="container">
-      <h2>Register</h2>
+      <h2>注册</h2>
       <form @submit.prevent="register">
         <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
+          <label for="username" class="form-label">用户名</label>
           <input v-model="username" type="text" class="form-control" id="username" required>
         </div>
         <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
+          <label for="email" class="form-label">邮箱</label>
           <input v-model="email" type="email" class="form-control" id="email" required>
         </div>
         <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
+          <label for="password" class="form-label">密码</label>
           <input v-model="password" type="password" class="form-control" id="password" required>
         </div>
-        <button type="submit" class="btn btn-primary">Register</button>
+        <button type="submit" class="btn btn-primary">注册</button>
       </form>
     </div>
   </template>

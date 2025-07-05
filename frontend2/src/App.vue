@@ -2,35 +2,35 @@
   <div id="app">
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
       <div class="container">
-        <router-link class="navbar-brand" to="/">Flower Shop</router-link>
+        <router-link class="navbar-brand" to="/">鲜花商店</router-link>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <router-link class="nav-link" to="/">Home</router-link>
+              <router-link class="nav-link" to="/">主页</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/products">Products</router-link>
+              <router-link class="nav-link" to="/products">商品</router-link>
             </li>
             <li class="nav-item">
-              <router-link class="nav-link" to="/cart">Cart ({{ cartCount }})</router-link>
+              <router-link class="nav-link" to="/cart">购物车 ({{ cartCount }})</router-link>
             </li>
             <li class="nav-item" v-if="!user">
-              <router-link class="nav-link" to="/login">Login</router-link>
+              <router-link class="nav-link" to="/login">登录</router-link>
             </li>
             <li class="nav-item" v-if="user && user.role === 'seller'">
-              <router-link class="nav-link" to="/add-product">Add Product</router-link>
+              <router-link class="nav-link" to="/add-product">添加商品</router-link>
             </li>
             <li class="nav-item" v-if="!user">
-              <router-link class="nav-link" to="/seller/login">Seller Login</router-link>
+              <router-link class="nav-link" to="/seller/login">商家登录</router-link>
             </li>
             <li class="nav-item" v-if="!user">
-              <router-link class="nav-link" to="/register">Register</router-link>
+              <router-link class="nav-link" to="/register">注册</router-link>
             </li>
             <li class="nav-item" v-if="user">
-              <a class="nav-link" href="#" @click="logout">Logout</a>
+              <a class="nav-link" href="#" @click="logout">退出登录</a>
             </li>
           </ul>
         </div>

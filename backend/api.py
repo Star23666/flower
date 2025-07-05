@@ -160,11 +160,11 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username,role='user').first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误"}), 401
     access_token = create_access_token(identity=user.id)
-    return jsonify({"access_token": access_token, "username": user.username}), 200
+    return jsonify({"access_token": access_token, "username": user.username, "role": user.role}), 200
 
 @api_bp.route('/api/products', methods=['GET'])
 def get_products():

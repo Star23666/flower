@@ -1,12 +1,12 @@
 <template>
   <div class="container">
-    <h2>Cart</h2>
+    <h2>购物</h2>
     <ul>
       <li v-for="item in cart" :key="item.id">
         {{ item.name }} - {{ item.quantity }} x ${{ item.price }}
       </li>
     </ul>
-    <button class="btn btn-success" @click="placeOrder">Place Order</button>
+    <button class="btn btn-success" @click="placeOrder">请下单</button>
   </div>
 </template>
 

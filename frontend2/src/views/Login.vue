@@ -1,23 +1,23 @@
 <template>
   <div class="container">
-    <h2>Login</h2>
+    <h2>登录</h2>
     <form @submit.prevent="login">
       <div class="mb-3">
-        <label for="username" class="form-label">Username</label>
+        <label for="username" class="form-label">用户名</label>
         <input v-model="username" type="text" class="form-control" id="username" required>
       </div>
       <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
+        <label for="password" class="form-label">密码</label>
         <input v-model="password" type="password" class="form-control" id="password" required>
       </div>
-      <button type="submit" class="btn btn-primary">Login</button>
+      <button type="submit" class="btn btn-primary">登录</button>
     </form>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'UserLogin', // Changed from 'Login'
+  name: 'UserLogin', 
   data() {
     return {
       username: '',
@@ -29,7 +29,8 @@ export default {
       try {
         await this.$store.dispatch('login', {
           username: this.username,
-          password: this.password
+          password: this.password,
+          type:'user'
         });
         this.$router.push('/products');
       } catch (error) {
