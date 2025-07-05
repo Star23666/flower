@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, Order, OrderDetail, Product
+from routes.models import db, Order, OrderDetail, Product
 
 orders_bp = Blueprint('orders', __name__)
 

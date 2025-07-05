@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from models import db, Product, Category
+from routes.models import db, Product, Category
 from flask_jwt_extended import jwt_required
 
 products_bp = Blueprint('products', __name__)
