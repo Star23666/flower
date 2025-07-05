@@ -3,7 +3,7 @@ import HomePage from '../views/Home.vue';
 import ProductListPage from '../views/ProductList.vue';
 import ShoppingCart from '../views/Cart.vue';
 import UserLogin from '../views/UserLogin.vue';
-import UserRegister from '../views/Register.vue';
+import UserRegister from '../views/UserRegister.vue';
 import AddProduct from '../views/AddProduct.vue';
 import SellerLogin from '../views/SellerLogin.vue';
 const routes = [
