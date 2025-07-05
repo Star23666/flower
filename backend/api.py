@@ -147,10 +147,12 @@ def register():
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    gender = data.get('gender')   # 新增
+    phone = data.get('phone')     # 新增
     if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
         return jsonify({"message": "用户名或邮箱已存在"}), 400
     hashed_password = generate_password_hash(password)
-    new_user = User(username=username, email=email, password=hashed_password, role='user')
+    new_user = User(username=username, email=email, password=hashed_password, role='user',gender=gender,phone=phone)
     db.session.add(new_user)
     db.session.commit()
     return jsonify({"message": "用户注册成功"}), 201
