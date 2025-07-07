@@ -11,6 +11,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 import { Plus } from '@element-plus/icons-vue'
+
 function handleUploadSuccess(response) {
   currentProduct.value.image_url = response.url
 }
@@ -81,7 +82,7 @@ const onDelete = (row) => {
     { type: 'warning' }
   ).then(async () => {
     try {
-      await store.dispatch('删除商品', row.id)
+      await store.dispatch('deleteProduct', row.id)
       ElMessage.success('删除成功')
     } catch (e) {
       ElMessage.error(e.message || '删除失败')
@@ -89,14 +90,22 @@ const onDelete = (row) => {
   }).catch(() => {})
 }
 
+// 上传图片成功后的处理函数，生成图片的完整访问 URL
+function getImageUrl(url) {
+   // 如果已经是 http 开头（绝对路径），直接返回
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+   // 否则拼接后端服务器地址，生成完整访问路径
+  return 'http://localhost:5000' + url
+}
 // 保存商品（新增或编辑）
 const onSave = async () => {
   try {
     if (isEdit.value) {
-      await store.dispatch('更新商品',currentProduct.value)
+      await store.dispatch('updateProduct',currentProduct.value)
       ElMessage.success('修改成功')
     } else {
-      await store.dispatch('添加商品',currentProduct.value)
+      await store.dispatch('addProduct',currentProduct.value)
       ElMessage.success('添加成功')
     }
     dialogVisible.value = false
@@ -126,9 +135,17 @@ const onSave = async () => {
       </el-table-column>
       <el-table-column prop="image_url" label="鲜花图片" width="100">
         <template #default="scope">
-          <el-image :src="scope.row.image_url" style="width: 60px; height: 60px;" fit="cover" />
+           <!-- 通过 getImageUrl 方法拼接图片完整地址，保证图片能正常显示 -->
+          <el-image :src="getImageUrl(scope.row.image_url)" style="width: 60px; height: 60px;" fit="cover" />
         </template>
       </el-table-column>
+      <el-table-column prop="status" label="状态" width="100">
+  <template #default="scope">
+    <el-tag :type="scope.row.status === 'active' ? 'success' : 'info'">
+      {{ scope.row.status === 'active' ? '上架' : '下架' }}
+    </el-tag>
+  </template>
+</el-table-column>
       <el-table-column prop="stock" label="库存" />
       <el-table-column prop="price" label="售价" />
       <el-table-column prop="description" label="描述" />
@@ -160,6 +177,12 @@ const onSave = async () => {
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="状态">
+  <el-select v-model="currentProduct.status">
+    <el-option label="上架" value="active" />
+    <el-option label="下架" value="inactive" />
+  </el-select>
+</el-form-item>
         <el-form-item label="图片">
         <el-upload
     class="avatar-uploader"

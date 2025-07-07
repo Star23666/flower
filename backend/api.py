@@ -81,7 +81,8 @@ def get_seller_products():
         "stock": p.stock,
         "category_id": p.category_id,
         "description": p.description,
-        "image_url": p.image_url
+        "image_url": p.image_url,
+        "status": p.status  # 这里用数据库的真实值
     } for p in products]), 200
 
 @api_bp.route('/api/seller/products/<int:product_id>', methods=['PUT'])
@@ -101,6 +102,7 @@ def update_product(product_id):
     product.category_id = data.get('category_id', product.category_id)
     product.description = data.get('description', product.description)
     product.image_url = data.get('image_url', product.image_url)
+    product.status = data.get('status', product.status)
     db.session.commit()
     return jsonify({"message": "商品更新成功"}), 200
 

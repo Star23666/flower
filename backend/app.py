@@ -10,6 +10,18 @@ load_dotenv()
 
 # 创建 Flask 应用
 app = Flask(__name__)
+
+# BASE_DIR 表示项目的根目录（flask-shop），通过两次 os.path.dirname 获取到根目录的绝对路径
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# static_folder 表示项目根目录下的 static 文件夹的绝对路径
+static_folder = os.path.join(BASE_DIR, 'static')
+
+# 创建 Flask 应用，并指定 static_folder 为项目根目录下的 static 文件夹
+# 这样无论你在哪里启动 Flask，/static/ 路由都会指向根目录的 static 文件夹
+app = Flask(__name__, static_folder=static_folder)
+
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')

@@ -26,6 +26,7 @@ class Product(db.Model):
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(255), nullable=True)
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    status = db.Column(db.String(10), default='active')  # 'active' 上架, 'inactive' 下架
 
 class Order(db.Model):
     __tablename__ = 'orders'
