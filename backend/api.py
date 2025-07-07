@@ -8,7 +8,7 @@ from db import db
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import os
-
+from models import OrderItem
 api_bp = Blueprint('api', __name__)
 
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
@@ -111,6 +111,9 @@ def update_product(product_id):
 def delete_product(product_id):
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
+    order_detail = OrderItem.query.filter_by(product_id=product_id).first()
+    if order_detail:
+        return jsonify({"message": "该商品已有订单，无法删除"}), 400
     if user.role != 'seller':
         return jsonify({"message": "仅商家可删除商品"}), 403
     product = Product.query.filter_by(id=product_id, seller_id=user_id).first()

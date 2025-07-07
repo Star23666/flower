@@ -85,7 +85,12 @@ const onDelete = (row) => {
       await store.dispatch('deleteProduct', row.id)
       ElMessage.success('删除成功')
     } catch (e) {
-      ElMessage.error(e.message || '删除失败')
+      // 这里根据后端返回的 message 精准提示
+      if (e && e.message && e.message.includes('已有订单')) {
+        ElMessage.error('该商品已有订单，无法删除！')
+      } else {
+        ElMessage.error(e.message || '删除失败')
+      }   
     }
   }).catch(() => {})
 }

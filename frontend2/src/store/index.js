@@ -98,12 +98,13 @@ export default createStore({
         });
         dispatch('fetchSellerProducts');
       } catch (error) {
-        throw new Error('删除商品失败');
+        const msg = error.response?.data?.message || '删除失败';
+        throw new Error(msg);
       }
     },
     async login({ commit }, { username, password, type = 'user' }) {
       try {
-        // 根据 type 选择接口
+        // 根据 type 选择接口1
         const url =
           type === 'seller'
             ? 'http://localhost:5000/api/seller/login'
@@ -120,14 +121,14 @@ export default createStore({
           role: response.data.role
         });
       } catch (error) {
-        throw new Error('Login failed');
+        throw new Error('登录失败');
       }
     },
     async register(_, credentials) {
       try {
         await axios.post('http://localhost:5000/api/auth/register', credentials);
       } catch (error) {
-        throw new Error('Registration failed');
+        throw new Error('注册失败');
       }
     },
     async createOrder({ state }) {
