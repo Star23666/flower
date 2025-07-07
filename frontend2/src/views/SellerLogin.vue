@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex justify-content-center align-items-center min-vh-100 bg-light">
     <el-card class="login-card" shadow="hover">
-      <h2 class="mb-4 text-center">管理员登录</h2>
+      <h2 class="mb-4 text-center">商家登录</h2>
       <el-form @submit.prevent="login" :model="form" :rules="rules" ref="loginForm" status-icon>
         <el-form-item prop="username" required>
           <el-input
@@ -84,7 +84,7 @@ const login = async () => {
         password: form.password,
         type: 'seller'
       })
-      router.push('/products')
+      router.push('/seller/products')
     } catch (e) {
       error.value = '用户名或密码错误'
     } finally {

@@ -12,7 +12,7 @@
 
 <script>
 export default {
-  name: 'ShoppingCart', // Changed from 'Cart'
+  name: 'ShoppingCart', 
   computed: {
     cart() {
       return this.$store.state.cart;
