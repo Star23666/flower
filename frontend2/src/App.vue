@@ -48,6 +48,7 @@
         </div>
       </div>
     </nav>
+
     <div class="container mt-4">
       <router-view></router-view>
     </div>
@@ -63,8 +64,8 @@ export default {
       return this.$store.state.user || JSON.parse(localStorage.getItem('user') || 'null');
     },
     cartCount() {
-      return this.$store.state.cart.reduce((total, item) => total + item.quantity, 0);
-    },
+  return (this.$store.state.cart || []).reduce((total, item) => total + item.quantity, 0);
+},
     // 新增：判断当前路由是否为登录/注册/商家登录页
     isLoginPage() {
       const loginPages = ['/', '/login', '/register', '/seller/login']

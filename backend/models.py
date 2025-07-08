@@ -1,5 +1,5 @@
 from db import db
-
+from datetime import datetime
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -9,6 +9,8 @@ class User(db.Model):
     role = db.Column(db.String(20), default='user')
     gender = db.Column(db.String(10))
     phone = db.Column(db.String(20))
+    avatar = db.Column(db.String(256))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Category(db.Model):
     __tablename__ = 'categories'

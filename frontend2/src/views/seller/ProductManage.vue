@@ -41,10 +41,31 @@ const currentProduct = ref({
   image_url: ''
 })
 
+
+
 // 商品表格数据，直接绑定 Vuex state
-const products = computed(() => store.state.sellerProducts)
+const searchText = ref('');
+const products = computed(() => {
+  if (!searchText.value) return store.state.sellerProducts;
+  return store.state.sellerProducts.filter(
+  p =>
+    (p.name && p.name.includes(searchText.value)) ||
+    (p.description && p.description.includes(searchText.value))
+);
+});
+
+function onSearch() {
+  // 这里只需要触发 products 的 computed 重新计算即可
+}
+
 // 分类数据，直接绑定 Vuex state
 const categories = computed(() => store.state.categories)
+
+const getCategoryName = (id) => {
+  const cat = categories.value.find(c => String(c.id) === String(id))
+  return cat ? cat.name : '未知'
+}
+
 
 // 页面加载时获取商家商品和分类
 onMounted(() => {
@@ -106,6 +127,14 @@ function getImageUrl(url) {
 // 保存商品（新增或编辑）
 const onSave = async () => {
   try {
+    let categoryId = currentProduct.value.category_id;
+    // 判断是否为新类别
+    if (typeof categoryId === 'string') {
+      // 调用新增类别接口
+      const res = await store.dispatch('addCategory', { name: categoryId });
+      categoryId = res.id; // 新增类别返回的 id
+    }
+    currentProduct.value.category_id = categoryId;
     if (isEdit.value) {
       await store.dispatch('updateProduct',currentProduct.value)
       ElMessage.success('修改成功')
@@ -124,20 +153,26 @@ const onSave = async () => {
   <div class="product-manage">
     <!-- 工具栏：新增按钮 -->
     <div class="toolbar">
-      <el-button type="success" @click="onAddProduct" class="toolbar-item">+ 添加商品</el-button>
-    </div>
+  <el-input
+    v-model="searchText"
+    placeholder="请输入商品名称"
+    style="width: 200px; margin-right: 8px;"
+    clearable
+    @keyup.enter="onSearch"
+  />
+  <el-button type="primary" @click="onSearch">搜索</el-button>
+  <el-button type="success" @click="onAddProduct" class="toolbar-item">+ 添加商品</el-button>
+</div>
+    
 
     <!-- 商品表格 -->
     <el-table :data="products" border style="width: 100%; margin-top: 16px;">
       <el-table-column prop="name" label="鲜花名称" />
-      <el-table-column prop="category_id" label="类别">
-        <template #default="scope">
-          <!-- 分类名映射 -->
-          <span>
-            {{ categories.find(cat => cat.id === scope.row.category_id)?.name || '未知' }}
-          </span>
-        </template>
-      </el-table-column>
+      <el-table-column label="类别">
+  <template #default="{ row }">
+    {{ getCategoryName(row.category_id) }}
+  </template>
+</el-table-column>
       <el-table-column prop="image_url" label="鲜花图片" width="100">
         <template #default="scope">
            <!-- 通过 getImageUrl 方法拼接图片完整地址，保证图片能正常显示 -->
@@ -172,16 +207,23 @@ const onSave = async () => {
         <el-form-item label="名称">
           <el-input v-model="currentProduct.name" />
         </el-form-item>
-        <el-form-item label="类别">
-          <el-select v-model="currentProduct.category_id" placeholder="请选择类别">
-            <el-option
-              v-for="cat in categories"
-              :key="cat.id"
-              :label="cat.name"
-              :value="cat.id"
-            />
-          </el-select>
-        </el-form-item>
+    <!-- 商品类别选择框，下拉可选所有已存在的类别 -->
+<el-form-item label="类别">
+    <el-select 
+  v-model="currentProduct.category_id"
+  placeholder="请选择或输入类别"
+  filterable
+  allow-create
+  default-first-option
+>
+  <el-option
+    v-for="cat in categories"
+    :key="cat.id"
+    :label="cat.name"
+    :value="cat.id"
+  />
+    </el-select>
+</el-form-item>
         <el-form-item label="状态">
   <el-select v-model="currentProduct.status">
     <el-option label="上架" value="active" />

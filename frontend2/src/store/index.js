@@ -7,7 +7,8 @@ export default createStore({
     cart: [],
     products: [],
     categories: [],
-    sellerProducts:[]
+    sellerProducts:[],
+    users:[]
   },
   mutations: {
     setUser(state, user) {
@@ -30,9 +31,22 @@ export default createStore({
     setSellerProducts(state, products) {
       state.sellerProducts = products;
     },
-
+    setUsers(state, users) {
+      state.users = users;
+    },
   },
   actions: {
+    async fetchCategories({ commit }) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/categories', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        commit('setCategories', response.data);
+      } catch (error) {
+        console.error('获取分类失败:', error);
+      }
+    },
     async fetchProducts({ commit }) {
       try {
         const response = await axios.get('http://localhost:5000/api/products');
@@ -42,13 +56,11 @@ export default createStore({
         
       }
     },
-    async fetchCategories({ commit }) {
-      try {
-        const response = await axios.get('http://localhost:5000/api/categories');
-        commit('setCategories', response.data);
-      } catch (error) {
-        console.error('获取分类失败:', error);
-      }
+    addCategory(_, payload) {
+      const token = localStorage.getItem('token')
+      return axios.post('http://localhost:5000/api/categories', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => res.data)
     },
     async fetchSellerProducts({ commit }) {
       try {
@@ -61,7 +73,6 @@ export default createStore({
         console.error('获取商家商品失败', error);
       }
     },
-
     // 添加商品
     async addProduct({ dispatch }, product) {
       try {
@@ -102,6 +113,7 @@ export default createStore({
         throw new Error(msg);
       }
     },
+    
     async login({ commit }, { username, password, type = 'user' }) {
       try {
         // 根据 type 选择接口1
@@ -143,6 +155,14 @@ export default createStore({
       } catch (error) {
         throw new Error('下单失败');
       }
+    },
+    async fetchUsers({ commit }, searchText = '') {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/users', {
+        params: { search: searchText },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      commit('setUsers', response.data);
     }
   }
 });

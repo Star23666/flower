@@ -15,6 +15,7 @@ import Profile from '@/views/seller/Profile.vue';
 
 const routes = [
   { path: '/', component: UserLogin },
+  { path: '/seller/new', name: 'SellerNew', component: () => import('@/views/seller/SellerNew.vue') },
   { path: '/home', component: HomePage },
   { path: '/products', component: ProductListPage },
   { path: '/cart', component: ShoppingCart },

@@ -5,7 +5,6 @@ from models import User, Category, Product, Order, OrderItem
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import Blueprint
 from db import db
-from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
 import os
 from models import OrderItem
@@ -14,11 +13,17 @@ api_bp = Blueprint('api', __name__)
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
+@jwt_required(optional=True)  # 注册时未登录也能传
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @api_bp.route('/api/upload/image', methods=['POST'])
 def upload_image():
+    img_type = request.args.get('type', 'common')  # 可以传 type=avatar 或 type=product
+    sub_folder = 'avatars' if img_type == 'avatar' else 'products'
+    upload_folder = os.path.join(UPLOAD_FOLDER, sub_folder)
+    
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
@@ -26,10 +31,11 @@ def upload_image():
         return jsonify({'error': 'No selected file'}), 400
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        os.makedirs(upload_folder, exist_ok=True)  # 注意这里
+        file_path = os.path.join(upload_folder, filename)
         file.save(file_path)
-        url = f'/static/uploads/{filename}'
+        # 返回带子目录的静态路径
+        url = f'/static/uploads/{sub_folder}/{filename}'
         return jsonify({'url': url})
     return jsonify({'error': 'Invalid file type'}), 400
 
@@ -214,6 +220,54 @@ def get_products():
     } for p in products]), 200
 
 @api_bp.route('/api/categories', methods=['GET'])
+@jwt_required()
 def get_categories():
     categories = Category.query.all()
     return jsonify([{"id": c.id, "name": c.name, "parent_id": c.parent_id} for c in categories]), 200
+@api_bp.route('/api/categories', methods=['POST'])
+@jwt_required()
+def add_category():
+    data = request.json
+    name = data.get('name')
+    if not name:
+        return jsonify({"message": "类别名不能为空"}), 400
+    exists = Category.query.filter_by(name=name).first()
+    if exists:
+        return jsonify({"id": exists.id, "name": exists.name}), 200
+    category = Category(name=name)
+    db.session.add(category)
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 201
+
+@api_bp.route('/api/users', methods=['GET','OPTIONS'])
+@jwt_required()
+def get_users():
+    search = request.args.get('search', '')
+    query = User.query
+    if search:
+        query = query.filter(
+            (User.username.like(f'%{search}%')) | (User.email.like(f'%{search}%'))
+        )
+    users = query.all()
+    return jsonify([
+        {
+            'id': u.id, 'username': u.username, 'email': u.email, 'role': u.role,
+            'gender': u.gender, 'phone': u.phone, 'avatar': u.avatar,
+            'created_at': u.created_at.strftime('%Y-%m-%d %H:%M')
+        } for u in users
+    ])
+
+@api_bp.route('/api/users/<int:user_id>', methods=['PUT'])
+@jwt_required()
+def update_user(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "用户不存在"}), 404
+    data = request.json
+    user.username = data.get('username', user.username)
+    user.email = data.get('email', user.email)
+    user.gender = data.get('gender', user.gender)
+    user.phone = data.get('phone', user.phone)
+    user.avatar = data.get('avatar', user.avatar)
+    db.session.commit()
+    return jsonify({"message": "用户信息已更新"}), 200
