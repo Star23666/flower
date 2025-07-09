@@ -8,7 +8,7 @@
       router
     >
       <el-menu-item index="/seller/users"><i class="el-icon-user"></i> 用户管理</el-menu-item>
-      <el-menu-item index="/seller/categories"><i class="el-icon-menu"></i> 鲜花分类</el-menu-item>
+      <el-menu-item index="/seller/flower-categories"><i class="el-icon-menu"></i> 鲜花分类</el-menu-item>
       <el-menu-item index="/seller/products"><i class="el-icon-goods"></i> 商品管理</el-menu-item>
       <el-menu-item index="/seller/orders"><i class="el-icon-tickets"></i> 订单管理</el-menu-item>
       <el-menu-item index="/seller/profile"><i class="el-icon-setting"></i> 个人中心</el-menu-item>

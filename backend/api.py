@@ -249,6 +249,48 @@ def add_category():
     db.session.commit()
     return jsonify({"id": category.id, "name": category.name}), 201
 
+@api_bp.route('/api/categories/<int:category_id>', methods=['DELETE'])
+@jwt_required()
+def delete_category(category_id):
+    category = Category.query.get(category_id)
+    if not category:
+        return jsonify({"message": "分类不存在"}), 404
+
+    # 检查该分类下是否有商品
+    product = Product.query.filter_by(category_id=category_id).first()
+    if product:
+        return jsonify({"message": "该分类下有商品，无法删除"}), 400
+
+    db.session.delete(category)
+    db.session.commit()
+    return jsonify({"message": "分类已删除"}), 200
+
+@api_bp.route('/api/categories/<int:category_id>', methods=['PUT'])
+@jwt_required()
+def update_category(category_id):
+    data = request.get_json()
+    name = data.get('name')
+    if not name:
+        return jsonify({"message": "类别名不能为空"}), 400
+
+    category = Category.query.get(category_id)
+    if not category:
+        return jsonify({"message": "分类不存在"}), 404
+
+    # 检查该分类下是否有商品，禁止编辑
+    product = Product.query.filter_by(category_id=category_id).first()
+    if product:
+        return jsonify({"message": "该分类下有商品，无法编辑"}), 400
+
+    # 检查重名
+    exists = Category.query.filter(Category.id != category_id, Category.name == name).first()
+    if exists:
+        return jsonify({"message": "该名称已存在"}), 400
+
+    category.name = name
+    db.session.commit()
+    return jsonify({"id": category.id, "name": category.name}), 200
+    
 @api_bp.route('/api/users', methods=['GET','OPTIONS'])
 @jwt_required()
 def get_users():

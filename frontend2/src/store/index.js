@@ -9,7 +9,6 @@ export default createStore({
     categories: [],
     sellerProducts:[],
     users:[],
-    categoryList: []
   },
   mutations: {
     setUser(state, user) {
@@ -18,8 +17,8 @@ export default createStore({
     setProducts(state, products) {
       state.products = products;
     },
-    setCategories(state, categories) {
-      state.categories = categories;
+    setCategories(state, list) {
+      state.categories = list;
     },
     addToCart(state, product) {
       const item = state.cart.find(i => i.id === product.id);
@@ -35,9 +34,6 @@ export default createStore({
     setUsers(state, users) {
       state.users = users;
     },
-    // setCategories(state, list) {
-    //   state.categoryList = list
-    // }
   },
   actions: {
     async fetchCategories({ commit }) {
@@ -54,17 +50,48 @@ export default createStore({
     async fetchProducts({ commit }) {
       try {
         const response = await axios.get('http://localhost:5000/api/products');
-        commit('setProducts', response.data);
+        const data = await response.json()
+        commit('setProducts',data);
       } catch (error) {
         console.error('获取商品失败:', error);
         
       }
     },
-    addCategory(_, payload) {
+    async addCategory(_, payload) {
       const token = localStorage.getItem('token')
-      return axios.post('http://localhost:5000/api/categories', payload, {
+      try {
+        const res = await axios.post('http://localhost:5000/api/categories', payload, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        return res.data
+      } catch (error) {
+        // 统一错误处理，可直接抛出或自定义错误信息
+        throw new Error(error.response?.data?.message || '新增分类失败')
+      }
+    },
+ 
+    async updateCategory(_, category) {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`http://localhost:5000/api/categories/${category.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json',
+          Authorization:`Bearer ${token}` },
+        body: JSON.stringify(category)
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || '编辑失败')
+      }
+    },
+    async deleteCategory(_, id) {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`http://localhost:5000/api/categories/${id}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
-      }).then(res => res.data)
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || '删除失败')}
     },
     async fetchSellerProducts({ commit }) {
       try {
@@ -198,31 +225,6 @@ export default createStore({
       if (!res.ok) {
     throw new Error(data.message || '保存失败')
       }
-    },
-    // async fetchCategories({ commit }) {
-    //   const res = await fetch('http://localhost:5000/api/categories')
-    //   const data = await res.json()
-    //   commit('setCategories', data)
-    // },
-    // async addCategory(_, category) {
-    //   const res = await fetch('http://localhost:5000/api/categories', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(category)
-    //   })
-    //   if (!res.ok) throw new Error('新增失败')
-    // },
-    async updateCategory(_, category) {
-      const res = await fetch(`http://localhost:5000/api/categories/${category.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(category)
-      })
-      if (!res.ok) throw new Error('编辑失败')
-    },
-    async deleteCategory(_, id) {
-      const res = await fetch(`http://localhost:5000/api/categories/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('删除失败')
     },
   }
 });

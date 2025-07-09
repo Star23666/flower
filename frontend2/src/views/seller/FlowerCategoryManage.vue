@@ -1,24 +1,22 @@
 <script setup>
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useStore } from 'vuex'
 
 const store = useStore()
-
-// 分类列表
-const categoryList = ref([])
 // 编辑弹窗显示
 const editDialogVisible = ref(false)
 // 当前编辑的分类
 const editForm = ref({ id: null, name: '' })
+// 页面加载时
+onMounted(() => {
+    console.log('页面加载，拉取分类')
+    store.dispatch('fetchCategories')
+})
 
-// 获取分类列表
-async function fetchCategories() {
-  // 假设有 vuex action: fetchCategories
-  await store.dispatch('fetchCategories')
-  categoryList.value = store.state.categoryList
-}
+// 直接用 computed 绑定分类列表
+const categoryList = computed(() => store.state.categories)
 
 // 新增分类
 function onAddCategory() {
@@ -43,7 +41,7 @@ async function onEditSave() {
       ElMessage.success('新增成功')
     }
     editDialogVisible.value = false
-    fetchCategories()
+    store.dispatch('fetchCategories')
   } catch (e) {
     ElMessage.error(e.message || '保存失败')
   }
@@ -55,17 +53,17 @@ async function onDelete(row) {
     await ElMessageBox.confirm(`确定要删除分类「${row.name}」吗？`, '警告', { type: 'warning' })
     await store.dispatch('deleteCategory', row.id)
     ElMessage.success('删除成功')
-    fetchCategories()
+    store.dispatch('fetchCategories')
   } catch (e) {
     ElMessage.error(e.message || '删除失败')
   }
 }
 
-onMounted(fetchCategories)
 
 </script>
 
 <template>
+    
     <div>
       <el-button type="primary" @click="onAddCategory" style="margin-bottom: 16px;">新增分类</el-button>
       <el-table :data="categoryList" border stripe style="width: 100%">

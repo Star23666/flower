@@ -8,10 +8,10 @@ import AddProduct from '../views/AddProduct.vue';
 import SellerLogin from '../views/SellerLogin.vue';
 import SellerDashboard from '@/views/SellerDashboard.vue';
 import ProductManage from '@/views/seller/ProductManage.vue';
-import CategoryManage from '@/views/seller/CategoryManage.vue';
 import OrderManage from '@/views/seller/OrderManage.vue';
 import UserManage from '@/views/seller/UserManage.vue';
 import Profile from '@/views/seller/Profile.vue';
+import FlowerCategoryManage from '@/views/seller/FlowerCategoryManage.vue';
 
 const routes = [
   { path: '/', component: UserLogin },
@@ -29,10 +29,10 @@ const routes = [
     meta: { requiresSeller: true },
     children: [
       { path: 'products', component: ProductManage, meta: { requiresSeller: true } },
-      { path: 'categories', component: CategoryManage,meta: { requiresSeller: true } },
       { path: 'orders', component: OrderManage, meta : { requiresSeller: true } },
       { path: 'users', component: UserManage, meta:{ requiresSeller: true }},
       { path: 'profile', component: Profile, meta : { requiresSeller:true} },
+      { path: 'flower-categories', component: FlowerCategoryManage, meta : { requiresSeller:true} },
       { path: '', redirect: '/seller/products' },
     ]
   },
