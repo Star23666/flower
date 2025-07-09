@@ -10,7 +10,9 @@ import os
 from models import OrderItem
 api_bp = Blueprint('api', __name__)
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 @jwt_required(optional=True)  # 注册时未登录也能传
@@ -186,11 +188,19 @@ def register():
     email = data.get('email')
     password = data.get('password')
     gender = data.get('gender')   # 新增
-    phone = data.get('phone')     # 新增
+    phone = data.get('phone') 
+    avatar = data.get('avatar')    # 新增
     if User.query.filter_by(username=username).first() or User.query.filter_by(email=email).first():
         return jsonify({"message": "用户名或邮箱已存在"}), 400
     hashed_password = generate_password_hash(password)
-    new_user = User(username=username, email=email, password=hashed_password, role='user',gender=gender,phone=phone)
+    new_user = User(username=username,
+    email=email,
+    password=hashed_password,
+    role='user',
+    gender=gender,
+    phone=phone,
+    avatar=avatar
+    )
     db.session.add(new_user)
     db.session.commit()
     return jsonify({"message": "用户注册成功"}), 201
@@ -251,8 +261,13 @@ def get_users():
     users = query.all()
     return jsonify([
         {
-            'id': u.id, 'username': u.username, 'email': u.email, 'role': u.role,
-            'gender': u.gender, 'phone': u.phone, 'avatar': u.avatar,
+            'id': u.id, 
+            'username': u.username,
+            'email': u.email, 
+            'role': u.role,
+            'gender': u.gender, 
+            'phone': u.phone,
+            'avatar': u.avatar,
             'created_at': u.created_at.strftime('%Y-%m-%d %H:%M')
         } for u in users
     ])
@@ -271,3 +286,29 @@ def update_user(user_id):
     user.avatar = data.get('avatar', user.avatar)
     db.session.commit()
     return jsonify({"message": "用户信息已更新"}), 200
+
+
+@api_bp.route('/api/users/<int:user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    print(f"收到删除用户请求: {user_id}")
+    user = User.query.get(user_id)
+    if not user:
+        print("用户不存在")
+        return jsonify({"message": "用户不存在"}), 404
+
+    # 检查该用户是否有订单
+    order = Order.query.filter_by(user_id=user_id).first()
+    print("user_id:", user_id, "order:", order)
+    if order:
+        print("该用户有订单，无法删除")
+        return jsonify({"message": "该用户有订单，无法删除"}), 400
+
+    try: 
+        db.session.delete(user)
+        db.session.commit()
+        print("删除成功")
+        return jsonify({"message": "用户已删除"}), 200
+    except Exception as e:
+        print("删除失败:", e)
+        return jsonify({"message": "删除失败", "error": str(e)}), 500

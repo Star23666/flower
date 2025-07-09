@@ -8,7 +8,8 @@ export default createStore({
     products: [],
     categories: [],
     sellerProducts:[],
-    users:[]
+    users:[],
+    categoryList: []
   },
   mutations: {
     setUser(state, user) {
@@ -34,6 +35,9 @@ export default createStore({
     setUsers(state, users) {
       state.users = users;
     },
+    // setCategories(state, list) {
+    //   state.categoryList = list
+    // }
   },
   actions: {
     async fetchCategories({ commit }) {
@@ -163,6 +167,62 @@ export default createStore({
         headers: { Authorization: `Bearer ${token}` }
       });
       commit('setUsers', response.data);
-    }
+    },
+    async deleteUser(_, userId) {
+
+
+
+      console.log('deleteUser action', userId)
+      const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+      })
+      const data = await res.json()
+      if (!res.ok) {
+    throw new Error(data.message || '删除失败')
+      }
+    },
+    // 更新用户信息
+    async updateUser(_, user) {
+      console.log('updateUser action', user)
+      const res = await fetch(`http://localhost:5000/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + localStorage.getItem('token')
+        },
+        body: JSON.stringify(user)
+      })
+      console.log('fetch返回', res.status)
+      const data = await res.json()
+      if (!res.ok) {
+    throw new Error(data.message || '保存失败')
+      }
+    },
+    // async fetchCategories({ commit }) {
+    //   const res = await fetch('http://localhost:5000/api/categories')
+    //   const data = await res.json()
+    //   commit('setCategories', data)
+    // },
+    // async addCategory(_, category) {
+    //   const res = await fetch('http://localhost:5000/api/categories', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(category)
+    //   })
+    //   if (!res.ok) throw new Error('新增失败')
+    // },
+    async updateCategory(_, category) {
+      const res = await fetch(`http://localhost:5000/api/categories/${category.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(category)
+      })
+      if (!res.ok) throw new Error('编辑失败')
+    },
+    async deleteCategory(_, id) {
+      const res = await fetch(`http://localhost:5000/api/categories/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('删除失败')
+    },
   }
 });
