@@ -458,3 +458,44 @@ def delete_user(user_id):
     except Exception as e:
         print("删除失败:", e)
         return jsonify({"message": "删除失败", "error": str(e)}), 500
+
+@api_bp.route('/api/seller/profile', methods=['PUT'])
+@jwt_required()
+def update_seller_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'seller':
+        return jsonify({'message': '商家不存在或无权限'}), 404
+
+    data = request.json
+    new_username = data.get('username')
+    if new_username:
+        user.username = new_username
+        db.session.commit()
+        return jsonify({'message': '用户名已更新'}), 200
+    else:
+        return jsonify({'message': '用户名不能为空'}), 400
+
+@api_bp.route('/api/seller/password', methods=['PUT'])
+@jwt_required()
+def change_seller_password():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'seller':
+        return jsonify({'message': '商家不存在或无权限'}), 404
+
+    data = request.json
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+
+    if not old_password or not new_password or not confirm_password:
+        return jsonify({'message': '请填写完整信息'}), 400
+    if new_password != confirm_password:
+        return jsonify({'message': '两次新密码不一致'}), 400
+    if not user.check_password(old_password):
+        return jsonify({'message': '旧密码错误'}), 400
+
+    user.set_password(new_password)
+    db.session.commit()
+    return jsonify({'message': '密码已修改'}), 200

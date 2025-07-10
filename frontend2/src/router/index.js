@@ -10,7 +10,7 @@ import SellerDashboard from '@/views/SellerDashboard.vue';
 import ProductManage from '@/views/seller/ProductManage.vue';
 import OrderManage from '@/views/seller/OrderManage.vue';
 import UserManage from '@/views/seller/UserManage.vue';
-import Profile from '@/views/seller/Profile.vue';
+import Profile from '@/views/seller/SellerProfile.vue';
 import FlowerCategoryManage from '@/views/seller/FlowerCategoryManage.vue';
 
 const routes = [

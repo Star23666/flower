@@ -11,7 +11,20 @@ class User(db.Model):
     phone = db.Column(db.String(20))
     avatar = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    def set_password(self, raw_password):
+        """
+        设置用户密码（加密后存储到数据库）
+        :param raw_password: 明文密码
+        """
+        self.password = generate_password_hash(raw_password)  # 使用 werkzeug 提供的加密方法
 
+    def check_password(self, raw_password):
+        """
+        校验用户输入的密码是否正确
+        :param raw_password: 用户输入的明文密码
+        :return: True 表示密码正确，False 表示密码错误
+        """
+        return check_password_hash(self.password, raw_password)  # 对比加密后的密码
 class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
