@@ -35,9 +35,16 @@ class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
-    status = db.Column(db.String(20), default='pending')
+    status = db.Column(db.String(20), default='已支付')
     created_at = db.Column(db.DateTime, default=db.func.now())
     items = db.relationship('OrderItem', backref='order', lazy=True)
+
+    pay_method = db.Column(db.String(20), default='现金支付')  # 仅现金 
+    receiver = db.Column(db.String(50))
+    receiver_phone = db.Column(db.String(200))
+    receiver_address = db.Column(db.String(255))
+
+    order_no = db.Column(db.String(32), unique=True, nullable=False, index=True)
 
 class OrderItem(db.Model):
     __tablename__ = 'order_details'

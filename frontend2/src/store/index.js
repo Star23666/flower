@@ -9,6 +9,7 @@ export default createStore({
     categories: [],
     sellerProducts:[],
     users:[],
+    orders: []
   },
   mutations: {
     setUser(state, user) {
@@ -33,6 +34,9 @@ export default createStore({
     },
     setUsers(state, users) {
       state.users = users;
+    },
+    setOrders(state, orders) {
+      state.orders = orders;
     },
   },
   actions: {
@@ -225,6 +229,15 @@ export default createStore({
       if (!res.ok) {
     throw new Error(data.message || '保存失败')
       }
+    },
+    async fetchOrders({ commit }) {
+      const token = localStorage.getItem('token')
+      const res = await fetch('http://localhost:5000/api/orders', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('获取订单失败')
+      const data = await res.json()
+      commit('setOrders', data)
     },
   }
 });

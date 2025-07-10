@@ -8,8 +8,14 @@ from db import db
 from werkzeug.utils import secure_filename
 import os
 from models import OrderItem
-api_bp = Blueprint('api', __name__)
 
+import time
+import random
+
+def generate_order_no(user_id):
+    return f"{int(time.time())}{user_id}{random.randint(1000,9999)}"
+
+api_bp = Blueprint('api', __name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
@@ -148,6 +154,71 @@ def get_seller_orders():
         "items": [{"product_id": i.product_id, "quantity": i.quantity, "unit_price": float(i.unit_price)} for i in o.items]
     } for o in orders]), 200
 
+@api_bp.route('/api/orders', methods=['GET'])
+@jwt_required()
+def get_orders():
+    """
+    获取所有订单列表（管理员/商家后台用）
+    返回每个订单的基本信息和商品明细
+    """
+    orders = Order.query.all()
+    return jsonify([
+        {
+            "id": o.id,
+            "user_id": o.user_id,  # 下单用户id
+            "total_amount": float(o.total_amount),  # 订单总价
+            "pay_method": o.pay_method,  # 支付方式
+            "receiver": o.receiver,  # 收货人
+            "receiver_phone": o.receiver_phone,
+            "receiver_address": o.receiver_address,
+            "status": o.status,  # 订单状态
+            "created_at": o.created_at.isoformat(),
+            "order_no": o.order_no,  # 下单时间
+            # 商品明细列表
+            "items": [
+                {
+                    "product_id": i.product_id,
+                    "product_name": i.product.name if hasattr(i, "product") else "",
+                    "quantity": i.quantity,
+                    "unit_price": float(i.unit_price)
+
+
+                } for i in o.items
+            ]
+        }
+        for o in orders
+    ]), 200
+
+@api_bp.route('/api/orders/<int:order_id>', methods=['GET'])
+@jwt_required()
+def get_order_detail(order_id):
+    """
+    获取单个订单详情（含商品明细）
+    """
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+
+    return jsonify({
+        "id": order.id,
+        "user_id": order.user_id,
+        "total_amount": float(order.total_amount),
+        "pay_method": order.pay_method,
+        "receiver": order.receiver,
+        "receiver_phone": order.receiver_phone,
+        "receiver_address": order.receiver_address,
+        "status": order.status,
+        "created_at": order.created_at.isoformat(),
+        "items": [
+            {
+                "product_id": i.product_id,
+                "product_name": i.product.name if hasattr(i, "product") else "",
+                "quantity": i.quantity,
+                "unit_price": float(i.unit_price)
+            } for i in order.items
+        ]
+    }), 200
+
 @api_bp.route('/api/orders', methods=['POST'])
 @jwt_required()
 def create_order():
@@ -157,13 +228,23 @@ def create_order():
     if not items:
         return jsonify({"message": "订单不能为空"}), 400
     total_amount = 0
+    receiver = data.get('receiver')
+    receiver_phone = data.get('receiver_phone')
+    receiver_address = data.get('receiver_address')
     for item in items:
         product = Product.query.get(item['product_id'])
         if not product or product.stock < item['quantity']:
             return jsonify({"message": f"商品 {item['product_id']} 不存在或库存不足"}), 400
         total_amount += float(product.price) * item['quantity']
     
-    order = Order(user_id=user_id, total_amount=total_amount, status='pending')
+    order = Order(
+        user_id=user_id,
+        total_amount=total_amount,
+        order_no=generate_order_no(user_id),
+        receiver=receiver,
+        receiver_phone=receiver_phone,
+        receiver_address=receiver_address
+    )
     db.session.add(order)
     db.session.flush()
     
