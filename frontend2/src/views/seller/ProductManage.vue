@@ -167,8 +167,9 @@ const onSave = async () => {
 
     <!-- 商品表格 -->
     <el-table :data="products" border style="width: 100%; margin-top: 16px;">
-      <el-table-column prop="name" label="鲜花名称" />
-      <el-table-column label="类别">
+      <el-table-column prop="id" label="商品ID" width="80" align="center" />
+      <el-table-column prop="name" label="鲜花名称" min-width="100" />
+      <el-table-column label="类别" min-width="100" show-overflow-tooltip>
   <template #default="{ row }">
     {{ getCategoryName(row.category_id) }}
   </template>
@@ -188,7 +189,7 @@ const onSave = async () => {
 </el-table-column>
       <el-table-column prop="stock" label="库存" />
       <el-table-column prop="price" label="售价" />
-      <el-table-column prop="description" label="描述" />
+      <el-table-column prop="description" label="描述" min-width="100" show-overflow-tooltip />
       <el-table-column label="操作" width="160">
         <template #default="scope">
           <el-button size="small" type="primary" @click="onEdit(scope.row)">编辑</el-button>

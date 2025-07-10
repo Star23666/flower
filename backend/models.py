@@ -37,7 +37,7 @@ class Order(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
     status = db.Column(db.String(20), default='已支付')
     created_at = db.Column(db.DateTime, default=db.func.now())
-    items = db.relationship('OrderItem', backref='order', lazy=True)
+    items = db.relationship('OrderItem', backref='order', cascade="all, delete-orphan", passive_deletes=True)
 
     pay_method = db.Column(db.String(20), default='现金支付')  # 仅现金 
     receiver = db.Column(db.String(50))
@@ -49,7 +49,8 @@ class Order(db.Model):
 class OrderItem(db.Model):
     __tablename__ = 'order_details'
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    product = db.relationship('Product', backref='order_items')
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)

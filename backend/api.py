@@ -219,6 +219,29 @@ def get_order_detail(order_id):
         ]
     }), 200
 
+@api_bp.route('/api/orders/<int:order_id>', methods=['DELETE'])
+@jwt_required()
+def delete_order(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+    # 你可以加权限校验（比如只有管理员或卖家能删）
+    db.session.delete(order)
+    db.session.commit()
+    return jsonify({"message": "订单已删除"}), 200
+
+@api_bp.route('/api/orders/<int:order_id>/ship', methods=['PUT'])
+@jwt_required()
+def ship_order(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({"message": "订单不存在"}), 404
+    if order.status != '已支付':
+        return jsonify({"message": "只有已支付订单才能发货"}), 400
+    order.status = '已发货'
+    db.session.commit()
+    return jsonify({"message": "订单已发货"}), 200
+
 @api_bp.route('/api/orders', methods=['POST'])
 @jwt_required()
 def create_order():
