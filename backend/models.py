@@ -44,6 +44,7 @@ class Product(db.Model):
     image_url = db.Column(db.String(255), nullable=True)
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(10), default='active')  # 'active' 上架, 'inactive' 下架
+    target = db.Column(db.String(100))  # 适用对象字段，如“恋人”、“朋友”、“长辈”等
 
 class Order(db.Model):
     __tablename__ = 'orders'

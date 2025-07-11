@@ -38,7 +38,8 @@ const currentProduct = ref({
   stock: 0,
   category_id: null,
   description: '',
-  image_url: ''
+  image_url: '',
+  target:''
 })
 
 
@@ -83,7 +84,8 @@ const onAddProduct = () => {
     stock: 0,
     category_id: null,
     description: '',
-    image_url: ''
+    image_url: '',
+    target:''
   }
   dialogVisible.value = true
 }
@@ -187,6 +189,7 @@ const onSave = async () => {
     </el-tag>
   </template>
 </el-table-column>
+      <el-table-column prop="target" label="适用对象" min-width="100" />
       <el-table-column prop="stock" label="库存" />
       <el-table-column prop="price" label="售价" />
       <el-table-column prop="description" label="描述" min-width="100" show-overflow-tooltip />
@@ -226,6 +229,7 @@ const onSave = async () => {
     </el-select>
 </el-form-item>
         <el-form-item label="状态">
+
   <el-select v-model="currentProduct.status">
     <el-option label="上架" value="active" />
     <el-option label="下架" value="inactive" />
@@ -253,6 +257,11 @@ const onSave = async () => {
         <el-form-item label="描述">
           <el-input v-model="currentProduct.description" />
         </el-form-item>
+
+        <el-form-item label="适用对象">
+  <el-input v-model="currentProduct.target" placeholder="如：恋人、朋友、长辈等" />
+          </el-form-item>
+
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
