@@ -20,6 +20,21 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
+            <li class="nav-item" v-if="user && user.role === 'user'" >
+              <router-link class="nav-link" to="/">主页</router-link>
+            </li>
+            <li class="nav-item" v-if="user && user.role === 'user'">
+              <router-link class="nav-link" to="/products">商品</router-link>
+            </li>
+            <li class="nav-item" v-if="user && user.role === 'user'">
+              <router-link class="nav-link" to="/cart">购物车 ({{ cartCount }})</router-link>
+            </li>
+            <li class="nav-item" v-if="!user">
+              <router-link class="nav-link" to="/login">登录</router-link>
+            </li>
+            <li class="nav-item" v-if="user && user.role === 'user'" >
+              <router-link class="nav-link" to="/user/profile">个人中心</router-link>
+            </li>
             <li class="nav-item" v-if="user">
               <a class="nav-link" href="#" @click="logout">退出登录</a>
             </li>

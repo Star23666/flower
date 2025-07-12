@@ -70,3 +70,11 @@ class OrderItem(db.Model):
     product = db.relationship('Product', backref='order_items')
     quantity = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)
+
+class Address(db.Model):
+    __tablename__ = 'addresses'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    realname = db.Column(db.String(50))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.String(255))

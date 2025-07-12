@@ -12,6 +12,7 @@
       <el-menu-item index="/seller/products"><i class="el-icon-goods"></i> 商品管理</el-menu-item>
       <el-menu-item index="/seller/orders"><i class="el-icon-tickets"></i> 订单管理</el-menu-item>
       <el-menu-item index="/seller/profile"><i class="el-icon-setting"></i> 个人中心</el-menu-item>
+      <el-menu-item index="/login"><i class="el-icon-plus"></i> 退出登录</el-menu-item>
     </el-menu>
   </template>
   

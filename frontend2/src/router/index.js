@@ -12,6 +12,7 @@ import OrderManage from '@/views/seller/OrderManage.vue';
 import UserManage from '@/views/seller/UserManage.vue';
 import Profile from '@/views/seller/SellerProfile.vue';
 import FlowerCategoryManage from '@/views/seller/FlowerCategoryManage.vue';
+import UserProfile from '@/views/UserProfile.vue';
 
 const routes = [
   { path: '/', component: UserLogin },
@@ -23,6 +24,7 @@ const routes = [
   { path: '/register', component: UserRegister },
   { path: '/add-product', component: AddProduct },
   { path: '/seller/login', component: SellerLogin },
+  { path: '/user/profile', component: UserProfile },
   {
     path: '/seller',
     component: SellerDashboard,

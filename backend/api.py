@@ -1,13 +1,11 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-
-from models import User, Category, Product, Order, OrderItem
+from models import User, Category, Product, Order, OrderItem,Address
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import Blueprint
 from db import db
 from werkzeug.utils import secure_filename
 import os
-from models import OrderItem
 
 import time
 import random
@@ -503,3 +501,87 @@ def change_seller_password():
     user.set_password(new_password)
     db.session.commit()
     return jsonify({'message': '密码已修改'}), 200
+
+@api_bp.route('/api/user/profile', methods=['GET'])
+@jwt_required()
+def get_user_profile():
+    """
+    获取当前登录用户的基本信息
+    """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"message": "用户不存在"}), 404
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "realname": user.realname if hasattr(user, "realname") else "",
+        "gender": user.gender,
+        "phone": user.phone,
+        "email": user.email,
+        "avatar": user.avatar
+    }), 200
+
+@api_bp.route('/api/user/addresses', methods=['GET'])
+@jwt_required()
+def get_user_addresses():
+    """
+    获取当前登录用户的收货地址列表，支持分页
+    """
+    user_id = get_jwt_identity()
+    page = int(request.args.get('page', 1))
+    page_size = int(request.args.get('page_size', 10))
+    query = Address.query.filter_by(user_id=user_id)
+    total = query.count()
+    addresses = query.offset((page-1)*page_size).limit(page_size).all()
+    return jsonify({
+        "addresses": [
+            {
+                "id": addr.id,
+                "realname": addr.realname,
+                "phone": addr.phone,
+                "address": addr.address
+            } for addr in addresses
+        ],
+        "total": total
+    }), 200
+
+@api_bp.route('/api/user/addresses', methods=['POST'])
+@jwt_required()
+def add_user_address():
+    user_id = get_jwt_identity()
+    data = request.json
+    addr = Address(
+        user_id=user_id,
+        realname=data.get('realname'),
+        phone=data.get('phone'),
+        address=data.get('address')
+    )
+    db.session.add(addr)
+    db.session.commit()
+    return jsonify({"message": "添加成功"}), 201
+
+@api_bp.route('/api/user/addresses/<int:address_id>', methods=['PUT'])
+@jwt_required()
+def update_user_address(address_id):
+    user_id = get_jwt_identity()
+    addr = Address.query.filter_by(id=address_id, user_id=user_id).first()
+    if not addr:
+        return jsonify({"message": "地址不存在"}), 404
+    data = request.json
+    addr.realname = data.get('realname', addr.realname)
+    addr.phone = data.get('phone', addr.phone)
+    addr.address = data.get('address', addr.address)
+    db.session.commit()
+    return jsonify({"message": "更新成功"}), 200
+
+@api_bp.route('/api/user/addresses/<int:address_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user_address(address_id):
+    user_id = get_jwt_identity()
+    addr = Address.query.filter_by(id=address_id, user_id=user_id).first()
+    if not addr:
+        return jsonify({"message": "地址不存在"}), 404
+    db.session.delete(addr)
+    db.session.commit()
+    return jsonify({"message": "删除成功"}), 200
