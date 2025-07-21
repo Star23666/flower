@@ -332,7 +332,8 @@ def get_products():
         "category_id": p.category_id,
         "description": p.description,
         "image_url": p.image_url,
-        "target":p.target
+        "target":p.target,
+        "status":p.status
     } for p in products]), 200
 
 @api_bp.route('/api/products/<int:product_id>', methods=['GET'])

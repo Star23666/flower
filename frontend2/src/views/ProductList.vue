@@ -71,7 +71,8 @@ export default {
 
   computed: {
     products() {
-      return this.$store.state.products;
+      // 过滤掉 is_active 为 inactive(下架) 的商品
+      return this.$store.state.products.filter(p => p.status !=='inactive');  
     }
   },
   methods: {
