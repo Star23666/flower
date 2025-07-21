@@ -335,6 +335,26 @@ def get_products():
         "target":p.target
     } for p in products]), 200
 
+@api_bp.route('/api/products/<int:product_id>', methods=['GET'])
+def get_product_detail(product_id):
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+    return jsonify({
+        "id": product.id,
+        "name": product.name,
+        "price": float(product.price),
+        "stock": product.stock,
+        "category_id": product.category_id,
+        "description": product.description,
+        "image_url": product.image_url,
+        "target": product.target,
+        # 如有其它字段，继续补充
+        "flower_language": getattr(product, "flower_language", None),
+        "scene": getattr(product, "scene", None)
+    }), 200
+
+
 @api_bp.route('/api/categories', methods=['GET'])
 @jwt_required()
 def get_categories():

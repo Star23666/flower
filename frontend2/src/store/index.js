@@ -24,10 +24,11 @@ export default createStore({
     },
     addToCart(state, product) {
       const item = state.cart.find(i => i.id === product.id);
+      const qty = product.quantity || 1;
       if (item) {
-        item.quantity++;
+        item.quantity += qty;
       } else {
-        state.cart.push({ ...product, quantity: 1 });
+        state.cart.push({ ...product, quantity: qty });
       }
     },
     setSellerProducts(state, products) {

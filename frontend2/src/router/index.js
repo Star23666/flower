@@ -25,6 +25,7 @@ const routes = [
   { path: '/add-product', component: AddProduct },
   { path: '/seller/login', component: SellerLogin },
   { path: '/user/profile', component: UserProfile },
+  
   {
     path: '/seller',
     component: SellerDashboard,
@@ -38,6 +39,11 @@ const routes = [
       { path: '', redirect: '/seller/products' },
     ]
   },
+  {
+    path: '/product/:id',
+    name: 'ProductDetail',
+    component: () => import('@/views/ProductDetail.vue')
+  }
 ];
 
 
