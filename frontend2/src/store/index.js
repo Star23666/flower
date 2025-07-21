@@ -9,18 +9,11 @@ export default createStore({
     categories: [],
     sellerProducts:[],
     users:[],
-    orders: [],
-    user: JSON.parse(localStorage.getItem('user')) || null,
+    orders: []
   },
   mutations: {
     setUser(state, user) {
       state.user = user;
-      if (user) {
-        localStorage.setItem('user',JSON.stringify(user));
-
-      }else{
-        localStorage.removeItem('user')
-      }
     },
     setProducts(state, products) {
       console.log('setProducts 被调用，数据为:', products)
