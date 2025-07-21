@@ -46,6 +46,7 @@
             <input
               type="number"
               min="1"
+              :max="product.stock"
               class="form-control mx-2"
               style="width: 80px; text-align: center;"
               v-model.number="quantity"
@@ -95,6 +96,13 @@
 
     // 防止非法输入
     if (this.quantity < 1) this.quantity = 1;
+    if (this.quantity > this.product.stock) {
+        this.quantity = this.product.stock;
+        this.$message && this.$message.warning
+        ? this.$message.warning('库存不足')
+        : alert('不能超过库存');
+        return;
+    }
     // this.product 已经是当前详情
     this.$store.commit('addToCart', { ...this.product, quantity: this.quantity });
     // 可选：弹出提示

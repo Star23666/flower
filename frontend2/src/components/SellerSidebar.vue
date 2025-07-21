@@ -22,7 +22,7 @@
   
   <style scoped>
   .el-menu-vertical-demo {
-    width: 200px;
+    width: 100px;
     min-height: 100vh;
   }
   </style>

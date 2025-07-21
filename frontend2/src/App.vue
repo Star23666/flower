@@ -35,7 +35,7 @@
             <li class="nav-item" v-if="user && user.role === 'user'" >
               <router-link class="nav-link" to="/user/profile">个人中心</router-link>
             </li>
-            <li class="nav-item" v-if="user">
+            <li class="nav-item" v-if="user && user.role === 'user'"  >
               <a class="nav-link" href="#" @click="logout">退出登录</a>
             </li>
           </ul>

@@ -9,11 +9,18 @@ export default createStore({
     categories: [],
     sellerProducts:[],
     users:[],
-    orders: []
+    orders: [],
+    user: JSON.parse(localStorage.getItem('user')) || null,
   },
   mutations: {
     setUser(state, user) {
       state.user = user;
+      if (user) {
+        localStorage.setItem('user',JSON.stringify(user));
+
+      }else{
+        localStorage.removeItem('user')
+      }
     },
     setProducts(state, products) {
       console.log('setProducts 被调用，数据为:', products)
@@ -25,10 +32,17 @@ export default createStore({
     addToCart(state, product) {
       const item = state.cart.find(i => i.id === product.id);
       const qty = product.quantity || 1;
+      // 假设product.stock是最新库存
+      const maxQty = product.stock || 0;
+
       if (item) {
-        item.quantity += qty;
+        if (item.quantity + qty > maxQty) {
+          item.quantity = maxQty;
+        } else {
+          item.quantity += qty;
+        }
       } else {
-        state.cart.push({ ...product, quantity: qty });
+        state.cart.push({ ...product, quantity: Math.min(qty, maxQty) });
       }
     },
     setSellerProducts(state, products) {
