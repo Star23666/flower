@@ -4,6 +4,23 @@
       <el-col :span="10">
         <h2>基本信息</h2>
         <el-form :model="userForm" label-width="80px" style="max-width: 400px">
+          <el-form-item label="头像">
+  <div style="display:flex;align-items:center;">
+    <el-avatar
+      :src="userForm.avatar || defaultAvatar"
+      :size="80"
+      style="margin-right: 20px; border:1px solid #eee;"
+    />
+    <el-upload
+      action="http://localhost:5000/api/upload/image"
+      :show-file-list="false"
+      :on-success="handleAvatarSuccess"
+      :headers="{ Authorization: `Bearer ${token}` }"
+    >
+      <el-button type="primary">更换头像</el-button>
+    </el-upload>
+  </div>
+</el-form-item>
           <el-form-item label="登录账号">
             <el-input v-model="userForm.username" disabled />
           </el-form-item>
@@ -21,6 +38,32 @@
           </el-form-item>
           <el-form-item label="登录密码">
             <el-input v-model="userForm.password" type="password" />
+          </el-form-item>
+          <el-form-item label="余额">
+            <el-input v-model="userForm.balance" disabled style="width: 120px; margin-right: 10px;" />
+            <el-button type="primary" @click="showRechargeDialog = true">充值</el-button>
+            <el-dialog v-model="showRechargeDialog" title="用户充值" width="500px">
+  <el-form :model="rechargeForm" label-width="80px">
+    <el-form-item label="充值金额">
+      <el-input v-model.number="rechargeForm.amount" type="number" min="1" />
+    </el-form-item>
+    <el-form-item label="支付方式">
+      <el-radio-group v-model="rechargeForm.payType">
+        <el-radio label="微信">微信支付</el-radio>
+        <el-radio label="支付宝">支付宝</el-radio>
+        <el-radio label="建行">中国建设银行</el-radio>
+        <el-radio label="农行">中国农业银行</el-radio>
+        <el-radio label="中行">中国银行</el-radio>
+        <el-radio label="交行">交通银行</el-radio>
+      </el-radio-group>
+    </el-form-item>
+  </el-form>
+  <template #footer>
+    <el-button @click="showRechargeDialog = false">取消</el-button>
+    <el-button type="primary" @click="confirmRecharge">确认充值</el-button>
+  </template>
+        </el-dialog>
+
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="saveUserInfo">修改</el-button>
@@ -112,11 +155,15 @@ const addForm = ref({
 })
 
 const userForm = ref({
+  id:'',
+  avatar:'',
   username: '',
   realname: '',
   gender: '',
   phone: '',
-  password: ''
+  password: '',
+  balance: ''
+
 })
 
 // 收货地址数据（初始为空）
@@ -125,8 +172,52 @@ const addressTotal = ref(0)
 const pageSize = ref(2)
 const currentPage = ref(1)
 
+
+const showRechargeDialog = ref(false)
+const rechargeForm = ref({
+  amount: 0,
+  payType: '微信'
+})
+
+async function confirmRecharge() {
+  if (!rechargeForm.value.amount || rechargeForm.value.amount <= 0) {
+    ElMessage.error('请输入有效的充值金额')
+    return
+  }
+  // 用数值加法，防止字符串拼接
+  userForm.value.balance = Number(userForm.value.balance) + Number(rechargeForm.value.amount)
+
+  // 同步到后端
+  const userId = userForm.value.id
+  const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ balance: userForm.value.balance })
+  })
+  const result = await res.json()
+  if (res.ok) {
+    ElMessage.success('充值成功！')
+    showRechargeDialog.value = false
+    rechargeForm.value.amount = 0
+    rechargeForm.value.payType = '微信'
+  } else {
+    ElMessage.error(result.message || '充值失败')
+  }
+}
+
+
+
 // 获取token
 const token = localStorage.getItem('token')
+
+const defaultAvatar = 'http://localhost:5000/static/uploads/avatars/default-avatar.jpg'
+function handleAvatarSuccess(response) {
+  userForm.value.avatar = 'http://localhost:5000' + response.url
+  ElMessage.success('头像上传成功')
+}
 
 function deleteAddress(row) {
   // 这里写删除逻辑，暂时可以先加提示
@@ -189,13 +280,15 @@ async function fetchUserProfile() {
   })
   if (res.ok) {
     const data = await res.json()
-    // 根据后端字段填充
+    userForm.value.id = data.id // 关键：一定要赋值id
     userForm.value.username = data.username
     userForm.value.realname = data.realname
     userForm.value.gender = data.gender
     userForm.value.phone = data.phone
-    // 密码一般不返回给前端，这里留空
+    userForm.value.avatar = data.avatar // 头像
     userForm.value.password = ''
+    userForm.value.balance = data.balance
+
   } else {
     ElMessage.error('获取用户信息失败')
   }
@@ -209,6 +302,9 @@ async function saveUserInfo() {
     realname: userForm.value.realname,
     gender: userForm.value.gender,
     phone: userForm.value.phone,
+    avatar: userForm.value.avatar,
+    password: userForm.value.password,
+    id:userForm.value.id,
     // 只有当用户填写了新密码时才提交
     ...(userForm.value.password ? { password: userForm.value.password } : {})
   }

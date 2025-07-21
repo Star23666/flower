@@ -432,6 +432,8 @@ def update_user(user_id):
     user.gender = data.get('gender', user.gender)
     user.phone = data.get('phone', user.phone)
     user.avatar = data.get('avatar', user.avatar)
+    user.password = data.get('password', user.password)
+    user.balance = data.get('balance',user.balance)
     db.session.commit()
     return jsonify({"message": "用户信息已更新"}), 200
 
@@ -519,7 +521,8 @@ def get_user_profile():
         "gender": user.gender,
         "phone": user.phone,
         "email": user.email,
-        "avatar": user.avatar
+        "avatar": user.avatar,
+        "balance":user.balance
     }), 200
 
 @api_bp.route('/api/user/addresses', methods=['GET'])

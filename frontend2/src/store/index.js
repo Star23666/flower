@@ -16,6 +16,7 @@ export default createStore({
       state.user = user;
     },
     setProducts(state, products) {
+      console.log('setProducts 被调用，数据为:', products)
       state.products = products;
     },
     setCategories(state, list) {
@@ -54,11 +55,11 @@ export default createStore({
     async fetchProducts({ commit }) {
       try {
         const response = await axios.get('http://localhost:5000/api/products');
-        const data = await response.json()
-        commit('setProducts',data);
+        // axios 的 response.data 就是后端返回的对象
+        commit('setProducts', Array.isArray(response.data) ? response.data : response.data.products);
+
       } catch (error) {
         console.error('获取商品失败:', error);
-        
       }
     },
     async addCategory(_, payload) {
