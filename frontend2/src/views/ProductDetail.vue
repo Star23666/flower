@@ -1,4 +1,15 @@
 <template>
+  <!-- 面包屑导航 -->
+  <nav aria-label="breadcrumb" class="mt-3 ms-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item">
+      <router-link to="/products">商品</router-link>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page">
+      {{ product ? (product.name || '鲜花详情') : '鲜花详情' }}
+    </li>
+  </ol>
+</nav>
     <div class="container py-4">
       <div v-if="product" class="row">
         <!-- 左侧图片，可用轮播 -->
@@ -9,14 +20,16 @@
         <div class="col-md-6">
           <h2 class="mb-3">{{ product.name }}</h2>
           <div class="mb-3 fs-4 text-danger">¥{{ product.price }}</div>
-          <table class="table table-borderless mb-3" style="width:auto">
+          <table  class="table table-borderless mb-3" style="width:auto">
             <tbody>
               <tr>
                 <td class="text-secondary">鲜花类型</td>
-                <td>{{ product.category_id || '暂无' }}</td>
+                <td>
+                {{ categories && categories.find ? (categories.find(c => c.id === product.category_id)?.name || '暂无') : '暂无' }}
+                </td>
               </tr>
               <tr>
-                <td class="text-secondary">鲜花和语</td>
+                <td class="text-secondary">鲜花花语</td>
                 <td>{{ product.flower_language || '暂无' }}</td>
               </tr>
               <tr>
@@ -66,25 +79,44 @@
     data() {
       return { 
         product: null,
-        quantity:1
+        quantity:1,
+        categories:[]
     }
     },
     mounted() {
       const id = this.$route.params.id;
       this.fetchProduct(id);
-    },
+      this.fetchCategories();
+  },
     methods: {
+      // 获取分类
+      async fetchCategories() {
+
+        try {
+          // 获取token
+          const token = localStorage.getItem('token');
+          const res = await fetch('http://localhost:5000/api/categories', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+          const data = await res.json();
+          this.categories = data;
+        } catch (e) {
+          this.categories = [];
+        }
+      },
       async fetchProduct(id) {
         // 建议后端提供 /api/products/:id 接口
         const res = await fetch(`http://localhost:5000/api/products/${id}`);
         this.product = await res.json();
       },
       getProductImage(product) {
-  if (!product || !product.image_url) {
-    return 'https://via.placeholder.com/400x300?text=No+Image';
-  }
-  if (product.image_url.startsWith('http')) return product.image_url;
-  return 'http://localhost:5000' + product.image_url;
+      if (!product || !product.image_url) {
+        return 'https://via.placeholder.com/400x300?text=No+Image';
+      }
+      if (product.image_url.startsWith('http')) return product.image_url;
+      return 'http://localhost:5000' + product.image_url;
     },
     increaseQty() {
     this.quantity++;

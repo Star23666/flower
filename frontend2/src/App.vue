@@ -27,7 +27,7 @@
               <router-link class="nav-link" to="/products">商品</router-link>
             </li>
             <li class="nav-item" v-if="user && user.role === 'user'">
-              <router-link class="nav-link" to="/cart">购物车 ({{ cartCount }})</router-link>
+              <router-link class="nav-link" to="/cart">购物车</router-link>
             </li>
             <li class="nav-item" v-if="!user">
               <router-link class="nav-link" to="/login">登录</router-link>

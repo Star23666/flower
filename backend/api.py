@@ -360,7 +360,11 @@ def get_product_detail(product_id):
 @jwt_required()
 def get_categories():
     categories = Category.query.all()
-    return jsonify([{"id": c.id, "name": c.name, "parent_id": c.parent_id} for c in categories]), 200
+    return jsonify([{
+        "id": c.id,
+        "name": c.name,
+        "parent_id": c.parent_id
+    } for c in categories]), 200
 @api_bp.route('/api/categories', methods=['POST'])
 @jwt_required()
 def add_category():
@@ -370,7 +374,10 @@ def add_category():
         return jsonify({"message": "类别名不能为空"}), 400
     exists = Category.query.filter_by(name=name).first()
     if exists:
-        return jsonify({"id": exists.id, "name": exists.name}), 200
+        return jsonify({
+            "id": exists.id,
+            "name": exists.name
+        }), 200
     category = Category(name=name)
     db.session.add(category)
     db.session.commit()
