@@ -78,7 +78,7 @@
   export default {
     data() {
       return { 
-        product: null,
+        product: {},
         quantity:1,
         categories:[]
     }
@@ -89,6 +89,7 @@
       this.fetchCategories();
   },
     methods: {
+
       // 获取分类
       async fetchCategories() {
 

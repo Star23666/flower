@@ -267,7 +267,8 @@ def create_order():
         order_no=generate_order_no(user_id),
         receiver=receiver,
         receiver_phone=receiver_phone,
-        receiver_address=receiver_address
+        receiver_address=receiver_address,
+        remark = data.get('remark','')
     )
     db.session.add(order)
     db.session.flush()
@@ -284,7 +285,7 @@ def create_order():
         db.session.add(order_item)
     
     db.session.commit()
-    return jsonify({"message": "Order created", "order_id": order.id}), 201
+    return jsonify({"success":True,"message": "Order created", "order_id": order.id}), 201
 
 @api_bp.route('/api/auth/register', methods=['POST'])
 def register():

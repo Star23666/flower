@@ -51,7 +51,7 @@
             <tbody>
             <tr v-for="item in cart" :key="item.id">
             <td>
-            <img :src="item.image_url || 'https://via.placeholder.com/60x60?text=No+Image'" style="width:60px;height:60px;object-fit:cover;">
+                <img :src="getProductImage(item)" style="width:60px;height:60px;object-fit:cover;">
             </td>
             <td>{{ item.name }}</td>
             <td>¥{{ item.price }}</td>
@@ -74,7 +74,7 @@
             <button 
               class="btn btn-success" 
               :disabled="!selectedAddressId || cart.length === 0 || loading" 
-              @click="pay">
+              @click="$emit('pay')">
               {{ loading ? '支付中...' : '支付' }}
             </button>
           </div>
@@ -105,6 +105,13 @@
       }
     },
     methods: {
+        // 图片
+        getProductImage(item) {
+            // 与商品页一致
+            if (!item.image_url) return 'https://via.placeholder.com/60x60?text=No+Image';
+            if (/^https?:\/\//.test(item.image_url)) return item.image_url;
+            return 'http://localhost:5000' + item.image_url;
+        },
       async pay() {
         if (!this.selectedAddressId) {
           this.$emit('toast', {msg: '请选择收货地址', type: 'danger'})
@@ -122,3 +129,4 @@
     }
   }
   </script>
+

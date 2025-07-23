@@ -4,12 +4,12 @@ import axios from 'axios';
 export default createStore({
   state: {
     user: null,
-    cart: [],
     products: [],
     categories: [],
     sellerProducts:[],
     users:[],
-    orders: []
+    orders: [],
+    cart: JSON.parse(localStorage.getItem('cart') || '[]'),
   },
   mutations: {
     setUser(state, user) {
@@ -35,8 +35,9 @@ export default createStore({
           item.quantity += qty;
         }
       } else {
-        state.cart.push({ ...product, quantity: Math.min(qty, maxQty) });
+        state.cart.push({ ...product, quantity: Math.min(qty, maxQty) ,selected:true });
       }
+      localStorage.setItem('cart', JSON.stringify(state.cart));
     },
     setSellerProducts(state, products) {
       state.sellerProducts = products;
@@ -47,7 +48,35 @@ export default createStore({
     setOrders(state, orders) {
       state.orders = orders;
     },
+    removeFromCart(state, id){
+      state.cart = state.cart.filter(item => item.id !== id);
+      localStorage.setItem('cart', JSON.stringify(state.cart));
+    },
+    updateCart(state, { id, quantity }) {
+      const item = state.cart.find(i => i.id === id);
+      if (item) item.quantity = quantity;
+      localStorage.setItem('cart', JSON.stringify(state.cart));
+    },
+    toggleItemSelected(state, { id, selected }) {
+      const item = state.cart.find(i => i.id === id);
+      if (item) item.selected = selected;
+      localStorage.setItem('cart', JSON.stringify(state.cart));
+    },
+    setCart(state, cart) {
+      state.cart = cart;
+      localStorage.setItem('cart', JSON.stringify(cart));
+    },
+    clearCart(state) {
+      state.cart = [];
+      localStorage.setItem('cart', '[]');
+    },
   },
+  getters: {
+    cart: state => state.cart,
+    selectedCart: state => state.cart.filter(i => i.selected),
+    totalPrice: state => state.cart.filter(i => i.selected).reduce((sum, item) => sum + item.price * item.quantity, 0)
+  },
+
   actions: {
     async fetchCategories({ commit }) {
       try {

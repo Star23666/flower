@@ -33,7 +33,14 @@
     <table class="table table-sm align-middle text-center bg-white rounded shadow-sm w-100" style="margin-bottom:0;">
       <thead class="table-light">
         <tr>
-          <th scope="col" style="width:40px;"></th>
+          <th style="width:40px;">
+          <input
+          type="checkbox"
+          class="cart-checkbox"
+          v-model="allSelected"
+          @change="toggleAll"
+          />
+        </th>
           <th scope="col" style="width:220px;">商品</th>
           <th scope="col" style="width:80px;">价格</th>
           <th scope="col" style="width:90px;">数量</th>
@@ -42,8 +49,15 @@
         </tr>
       </thead>
       <tbody>
-  <tr v-for="item in cart" :key="item.id">
-    <td><input type="checkbox" v-model="item.selected"></td>
+    <tr v-for="item in cart" :key="item.id">
+    <td>
+      <input 
+      type="checkbox" 
+      class="cart-checkbox"
+      v-model="item.selected"
+      @change="checkIfAllSelected"
+      />
+    </td>
     <!-- 商品列左对齐 -->
     <td class="d-flex align-items-center gap-2 p-2" style="justify-content: flex-start;">
       <img :src="getProductImage(item)" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" class="me-2">
@@ -54,15 +68,15 @@
     <td class="align-middle text-center">
       <input type="number"
         class="form-control text-center mx-auto"
-        style="width: 60px; padding: 2px 4px;"
+        style="width: 50px; padding: 2px 4px;"
         :min="1"
-        :step="1"
+        :max="item.stock"
         v-model.number="item.quantity"
         @input="validateQty(item)">
     </td>
     <td class="align-middle text-center">¥{{ (item.price * item.quantity).toFixed(2) }}</td>
     <td class="align-middle">
-      <button class="btn btn-danger btn-sm px-2 py-1" @click="removeItem(item)">删除</button>
+      <button class="btn btn-danger btn-sm px-2 py-1" @click="removeFromCart(item.id)">删除</button>
     </td>
   </tr>
 </tbody>
@@ -114,21 +128,45 @@ export default {
   data() {
     return {
       banner3,
-      cart: [], // 从 Vuex 或本地获取
-      allSelected: true,
       showCheckout:false,
       addressList:[],
       userBalance:0,
       toastMessage:'',
-      toastType:'', // 可扩展 info/warning/danger
+      toastType:'',
+      allSelected:false,
+      // 可扩展 info/warning/danger
     }
   },
   computed: {
+    cart(){
+      return this.$store.state.cart;
+    },
     totalPrice() {
-      return this.cart.reduce((sum, item) => item.selected ? sum + item.price * item.quantity : sum, 0)
-    }
+      return this.$store.getters.totalPrice;
+    },
   },
   methods: {
+    addToCart(product){
+      this.$store.commit('addToCart',product);
+    },
+    removeFromCart(id){
+      this.$store.commit('removeFromCart',id);
+    },
+    updateCart(id, quantity){
+      this.$store.commit('updateCart' , {id ,quantity});
+    },
+    toggleItemSelected(id, selected) {
+      this.$store.commit('toggleItemSelected', { id, selected });
+    },
+    clearCart() {
+      this.$store.commit('clearCart');
+    },
+    toggleAll(){
+      this.cart.forEach(i=> i.selected = this.allSelected);
+    },
+    checkIfAllSelected(){
+      this.allSelected = this.cart.every(i => i.selected);
+    },
     showToast(msg,type = 'success'){
       this.toastMessage = msg
       this.toastType = type
@@ -147,7 +185,7 @@ export default {
     },
     getProductImage(item) {
       // 与商品页一致
-      if (!item.image_url) return 'https://via.placeholder.com/60x60?text=No+Image';
+      if (!item.image_url) return 'http://localhost:5000/static/uploads/products/zhanwei.png';
       if (item.image_url.startsWith('http')) return item.image_url;
       return 'http://localhost:5000' + item.image_url;
     },
@@ -166,14 +204,10 @@ export default {
       item.quantity = Math.floor(item.quantity);
       this.updateCart(item);
     },
-    removeItem(item) {
-      this.cart = this.cart.filter(i => i.id !== item.id);
-      // 若用 Vuex，需同步到 store
-    },
-    toggleAll() {
-      this.cart.forEach(i => i.selected = this.allSelected);
-    },
-
+    // removeItem(item) {
+    //   this.cart = this.cart.filter(i => i.id !== item.id);
+    //   // 若用 Vuex，需同步到 store
+    // },
     // 获取地址
     async loadAddresses() {
       const res = await fetch('http://localhost:5000/api/user/addresses', { headers: { Authorization: 'Bearer ' + localStorage.token } })
@@ -191,26 +225,42 @@ export default {
       await this.loadAddresses()
       if (newId) this.selectedAddressId = newId
     },
-    async handlePay({ addressId, remark }) {
+
+    async handlePay({ remark }) {
+      console.log('selectedAddress:', this.selectedAddress);
+      // 根据当前选中的地址ID，找到对应的地址对象，并赋值给 this.selectedAddress，
+      // 以便下单时能获取收货人、电话、地址等信息。
+      this.selectedAddress = this.addressList.find(addr => addr.id === this.selectedAddressId) 
       if (this.userBalance < this.totalPrice) {
         this.showToast('余额不足，请充值', 'danger')
         return { success: false, message: '余额不足，请充值' }
       }
+      if (!this.selectedAddress){
+        this.showToast('请选择收货地址','danger');
+        return { success: false, message: '请选择收货地址'}
+
+      }
       try {
-        const res = await fetch('/api/order/create', {
+        const res = await fetch('http://localhost:5000/api/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.token },
           body: JSON.stringify({
-            address_id: addressId,
-            items: this.cart.filter(i => i.selected),
-            remark
+            items: this.cart.filter(i => i.selected).map(item =>({
+              product_id: item.id,
+              quantity:item.quantity
+            })),
+            receiver: this.selectedAddress.realname,
+            receiver_phone: this.selectedAddress.phone,
+            receiver_address: this.selectedAddress.address,
+            remark:remark,
+
           })
         })
         const data = await res.json()
-        if (data.success) {
+        if (res.ok) {  // res.ok 为 true 表示 2xx 响应
           this.showToast('支付成功！', 'success')
           this.showCheckout = false
-          this.cart = [] // 清空购物车
+          this.$store.commit('clearCart'); // 清空购物车（同步 localStorage）
           await this.loadBalance() // 自动刷新余额
           return { success: true }
         } else {
@@ -222,23 +272,18 @@ export default {
         return { success: false, message: '网络错误，请重试' }
       }
     },
-    checkout() {
-      // 跳转支付页面功能留空
-      alert('结算功能开发中');
-    },
-    updateCart(/*item*/){
-      // 若用 Vuex，提交 mutation
-    }
   },
   mounted() {
-
-    this.cart = this.$store.state.cart||[]
     this.loadAddresses();
     this.loadBalance();
     // 加载购物车数据
   }
 }
-// console.log('addresses:', this.addressList)
-// console.log('cart:', this.cart)
-// console.log('userBalance:', this.userBalance)
 </script>
+<style scoped>
+.cart-checkbox {
+  width: 1em;
+  height: 1em;
+  accent-color: #ffc107; /* Bootstrap黄色 */
+}
+</style>

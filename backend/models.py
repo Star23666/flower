@@ -63,6 +63,9 @@ class Order(db.Model):
 
     order_no = db.Column(db.String(32), unique=True, nullable=False, index=True)
 
+    remark = db.Column(db.String(255), nullable=True)
+
+
 class OrderItem(db.Model):
     __tablename__ = 'order_details'
     id = db.Column(db.Integer, primary_key=True)

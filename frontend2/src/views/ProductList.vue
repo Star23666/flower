@@ -77,7 +77,7 @@
           {{ categories.find(c => c.id === product.category_id)?.name || '未知类型' }}
         </p>
         <!-- <div class="d-flex justify-content-end">
-          <button class="btn btn-outline-primary btn-sm" @click.stop="addToCart(product)">加入购物车</button>
+          <button @click="handleAddToCart(product)">加入购物车</button>
         </div> -->
       </div>
     </div>
@@ -128,6 +128,11 @@ export default {
     }
   },
   methods: {
+
+  //   handleAddToCart(product) {
+  //   this.$store.commit('addToCart', product);
+  // },
+    
     // 获取分类
     async fetchCategories(){
   try{

@@ -32,7 +32,7 @@ db.init_app(app)
 
 # 初始化 JWT 和 CORS
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:8080"}})
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:8080"}} , supports_credentials=True)
 
 from api import api_bp # 导入 api.py 以注册路由
 app.register_blueprint(api_bp)
