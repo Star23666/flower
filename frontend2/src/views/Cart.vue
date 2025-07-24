@@ -121,9 +121,9 @@
 </div>
     <!-- 购物车内容 -->
   <div v-else>
-  <OrderList 
-  :orders="orderList" />
-  <button class="btn btn-secondary mt-3" @click="showOrderList = false" >返回购物车</button> 
+    <OrderList 
+    :orders="orderList" 
+    @backToCart="showOrderList = false" />
   </div>
 
   <div 
@@ -344,6 +344,9 @@ export default {
     this.loadAddresses();
     this.loadBalance();
     this.loadOrders(); //加载一次订单，防止刷新后为空
+    if (this.$route.query.order === '1'){
+      this.showOrderList = true;
+    }
   }
 }
 </script>

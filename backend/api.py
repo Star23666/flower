@@ -175,13 +175,15 @@ def get_orders():
             "status": o.status,  # 订单状态
             "created_at": o.created_at.isoformat(),
             "order_no": o.order_no,  # 下单时间
+            "remark": o.remark,
             # 商品明细列表
             "items": [
                 {
                     "product_id": i.product_id,
                     "product_name": i.product.name if hasattr(i, "product") else "",
                     "quantity": i.quantity,
-                    "unit_price": float(i.unit_price)
+                    "unit_price": float(i.unit_price),
+                    "image_url": i.product.image_url if hasattr(i.product, "image_url") else ""
 
 
                 } for i in o.items
@@ -210,12 +212,14 @@ def get_order_detail(order_id):
         "receiver_address": order.receiver_address,
         "status": order.status,
         "created_at": order.created_at.isoformat(),
+        "remark": order.remark,
         "items": [
             {
                 "product_id": i.product_id,
                 "product_name": i.product.name if hasattr(i, "product") else "",
                 "quantity": i.quantity,
-                "unit_price": float(i.unit_price)
+                "unit_price": float(i.unit_price),
+                "image_url": i.product.image_url if hasattr(i.product, "image_url") else ""
             } for i in order.items
         ]
     }), 200

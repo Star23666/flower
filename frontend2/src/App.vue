@@ -32,6 +32,9 @@
             <li class="nav-item" v-if="!user">
               <router-link class="nav-link" to="/login">登录</router-link>
             </li>
+            <li class="nav-item" v-if="user && user.role === 'user'">
+              <router-link class="nav-link" to="/cart?order=1">我的订单</router-link>
+            </li>
             <li class="nav-item" v-if="user && user.role === 'user'" >
               <router-link class="nav-link" to="/user/profile">个人中心</router-link>
             </li>
