@@ -1,4 +1,25 @@
 <template>
+
+
+<div v-if="showPaySuccessModal" class="modal-backdrop show">
+  <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.3)">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">支付成功</h5>
+        </div>
+        <div class="modal-body">
+          <p>您的订单已支付成功！</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" @click="showPaySuccessModal = false">确定</button>
+          <button class="btn btn-success" @click="toOrderList">我的订单</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  
   <!-- 保持轮播图不变 -->
   <div class="container py-2">
   <div id="carouselExampleIndicators" class="carousel slide mb-4" data-bs-ride="carousel" data-bs-interval="2500">
@@ -28,7 +49,7 @@
 </div>
 </div>
 
-
+<div v-if="!showOrderList"> 
     <h4 class="mb-3 text-center">购物车</h4>
     <table class="table table-sm align-middle text-center bg-white rounded shadow-sm w-100" style="margin-bottom:0;">
       <thead class="table-light">
@@ -81,10 +102,14 @@
   </tr>
 </tbody>
     </table>
+    <div v-if="cart.length === 0 && !showOrderList" class="text-center text-muted my-5">
+      购物车空空如也，快去选购商品吧！
+    </div>
     <div class="d-flex justify-content-end align-items-center gap-3 mt-2">
       <span class="fw-bold text-danger fs-6">总价：¥{{ totalPrice.toFixed(2) }}</span>
       <button class="btn btn-warning btn-sm px-3" @click="showCheckout = true" :disabled="cart.length === 0">去结算</button>
-  <CheckoutModal
+    </div>
+    <CheckoutModal
     v-if="showCheckout"
     :cart="cart.filter(i=>i.selected)"
     :total="totalPrice"
@@ -93,6 +118,12 @@
     @close="showCheckout = false"
     @pay="handlePay"
   />
+</div>
+    <!-- 购物车内容 -->
+  <div v-else>
+  <OrderList 
+  :orders="orderList" />
+  <button class="btn btn-secondary mt-3" @click="showOrderList = false" >返回购物车</button> 
   </div>
 
   <div 
@@ -119,11 +150,13 @@
 import banner3 from '@/assets/banner3.png'
 
 import CheckoutModal from './CheckoutModal.vue'
+import OrderList from './OrderList.vue'
 
 export default {
   name:'CartView',
   components:{
     CheckoutModal,
+    OrderList,
   },
   data() {
     return {
@@ -134,7 +167,10 @@ export default {
       toastMessage:'',
       toastType:'',
       allSelected:false,
-      // 可扩展 info/warning/danger
+      showOrderList:false,
+      lastOrder:[],  //支付成功后存储订单详情
+      orderList:[], //订单列表
+      showPaySuccessModal:false,
     }
   },
   computed: {
@@ -146,6 +182,27 @@ export default {
     },
   },
   methods: {
+
+    toOrderList(){
+      this.showPaySuccessModal = false;
+      this.showOrderList = true;
+    },
+
+    async loadOrders() {
+      const res = await fetch('http://localhost:5000/api/orders', { 
+        headers: { Authorization: 'Bearer ' + localStorage.token 
+
+        } 
+      });
+      const data = await res.json()
+      this.orderList = data;
+    },
+    
+    async handlePaySuccess() {
+      this.showOrderList = true;
+      await this.loadOrders();
+    },
+    
     addToCart(product){
       this.$store.commit('addToCart',product);
     },
@@ -185,7 +242,7 @@ export default {
     },
     getProductImage(item) {
       // 与商品页一致
-      if (!item.image_url) return 'http://localhost:5000/static/uploads/products/zhanwei.png';
+      if (!item.image_url) return 'http://localhost:5000/static/uploads/products/no-image.png';
       if (item.image_url.startsWith('http')) return item.image_url;
       return 'http://localhost:5000' + item.image_url;
     },
@@ -226,15 +283,20 @@ export default {
       if (newId) this.selectedAddressId = newId
     },
 
-    async handlePay({ remark }) {
+    async handlePay({ addressId,remark } = {}) {
+      console.log('Cart.vue handlePay', addressId, typeof addressId, remark);
+      console.log('addressList:', this.addressList);
+      console.log('addressId:', addressId);
       console.log('selectedAddress:', this.selectedAddress);
       // 根据当前选中的地址ID，找到对应的地址对象，并赋值给 this.selectedAddress，
       // 以便下单时能获取收货人、电话、地址等信息。
-      this.selectedAddress = this.addressList.find(addr => addr.id === this.selectedAddressId) 
+      
+      this.selectedAddress = this.addressList.find(addr => addr.id === addressId) 
       if (this.userBalance < this.totalPrice) {
         this.showToast('余额不足，请充值', 'danger')
         return { success: false, message: '余额不足，请充值' }
       }
+      
       if (!this.selectedAddress){
         this.showToast('请选择收货地址','danger');
         return { success: false, message: '请选择收货地址'}
@@ -262,6 +324,11 @@ export default {
           this.showCheckout = false
           this.$store.commit('clearCart'); // 清空购物车（同步 localStorage）
           await this.loadBalance() // 自动刷新余额
+          // 支付成功后,显示订单详情
+          this.lastOrder =  data.order || null,
+          await this.loadOrders();
+          // 只弹出支付成功弹窗，不切换订单列表
+          this.showPaySuccessModal = true; // 弹出支付成功弹窗
           return { success: true }
         } else {
           this.showToast(data.message || '支付失败', 'danger')
@@ -276,7 +343,7 @@ export default {
   mounted() {
     this.loadAddresses();
     this.loadBalance();
-    // 加载购物车数据
+    this.loadOrders(); //加载一次订单，防止刷新后为空
   }
 }
 </script>

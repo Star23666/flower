@@ -74,7 +74,7 @@
             <button 
               class="btn btn-success" 
               :disabled="!selectedAddressId || cart.length === 0 || loading" 
-              @click="$emit('pay')">
+              @click="pay">
               {{ loading ? '支付中...' : '支付' }}
             </button>
           </div>
@@ -100,33 +100,39 @@
       }
     },
     watch: {
-      addresses(newList) {
-        if (newList.length && !this.selectedAddressId) this.selectedAddressId = newList[0].id
+      addresses: {
+        immediate: true,
+        handler(newVal) {
+          console.log('watch addresses', newVal, this.selectedAddressId);
+          if (newVal && newVal.length > 0 && !this.selectedAddressId) {
+            this.selectedAddressId = newVal[0].id;
+            console.log('auto set selectedAddressId', this.selectedAddressId);
+          }
+        }
       }
     },
     methods: {
-        // 图片
-        getProductImage(item) {
-            // 与商品页一致
-            if (!item.image_url) return 'https://via.placeholder.com/60x60?text=No+Image';
-            if (/^https?:\/\//.test(item.image_url)) return item.image_url;
-            return 'http://localhost:5000' + item.image_url;
-        },
+      getProductImage(item) {
+    // 与商品页一致
+      if (!item.image_url) return 'https://via.placeholder.com/60x60?text=No+Image';
+      if (/^https?:\/\//.test(item.image_url)) return item.image_url;
+      return 'http://localhost:5000' + item.image_url;
+    },
+      
       async pay() {
+        console.log('pay emit', this.selectedAddressId, typeof this.selectedAddressId, this.remark);
         if (!this.selectedAddressId) {
           this.$emit('toast', {msg: '请选择收货地址', type: 'danger'})
           return
         }
         this.loading = true
         try {
-          // 通知父组件进行支付
-          await this.$emit('pay', { addressId: this.selectedAddressId, remark: this.remark })
-          // 父组件负责 toast 和关闭弹窗
+          this.$emit('pay', { addressId: this.selectedAddressId, remark: this.remark })
         } finally {
           this.loading = false
         }
       }
-    }
+    },
   }
   </script>
 
