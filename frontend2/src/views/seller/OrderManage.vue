@@ -114,14 +114,13 @@ async function handleShip(order) {
   <template #default="scope">
     <el-button-group>
       <el-button size="small" @click="showDetail(scope.row)">详情</el-button>
-      <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
-      
       <el-button
         v-if="scope.row.status === '已支付'"
         size="small"
         type="success"
         @click="handleShip(scope.row)"
       >发货</el-button>
+      <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
 
     </el-button-group>
   </template>

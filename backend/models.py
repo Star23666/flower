@@ -12,7 +12,7 @@ class User(db.Model):
     gender = db.Column(db.String(10))
     phone = db.Column(db.String(20))
     avatar = db.Column(db.String(256))
-    balance =db.Column(db.String(512))
+    balance = db.Column(db.Numeric(10, 2), default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     def set_password(self, raw_password):
         """

@@ -7,6 +7,8 @@ from db import db
 from werkzeug.utils import secure_filename
 import os
 
+from decimal import Decimal
+
 import time
 import random
 
@@ -141,18 +143,36 @@ def delete_product(product_id):
 @api_bp.route('/api/seller/orders', methods=['GET'])
 @jwt_required()
 def get_seller_orders():
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     if user.role != 'seller':
         return jsonify({"message": "仅商家可查看订单"}), 403
-    orders = Order.query.join(OrderItem).join(Product).filter(Product.seller_id == user_id).all()
+    orders = (
+    Order.query
+    .join(OrderItem, Order.id == OrderItem.order_id)
+    .join(Product, OrderItem.product_id == Product.id)
+    .filter(Product.seller_id == user_id)
+    .distinct()
+    .order_by(Order.created_at.desc())
+    .all()
+    )
+    print('orders:', orders)
+    print('seller_id:', user_id)
+    print('type(user_id):', type(user_id))
+    from sqlalchemy import inspect
+    print('type(Product.seller_id):', inspect(Product).columns.seller_id.type)
+    # orders = Order.query.join(OrderItem).join(Product).filter(Product.seller_id == user_id).all()
     return jsonify([{
         "id": o.id,
         "user_id": o.user_id,
         "total_amount": float(o.total_amount),
         "status": o.status,
         "created_at": o.created_at.isoformat(),
-        "items": [{"product_id": i.product_id, "quantity": i.quantity, "unit_price": float(i.unit_price)} for i in o.items]
+        "items": [{
+            "product_id": i.product_id, 
+            "quantity": i.quantity, 
+            "unit_price": float(i.unit_price)
+        } for i in o.items]
     } for o in orders]), 200
 
 @api_bp.route('/api/orders', methods=['GET'])
@@ -162,7 +182,22 @@ def get_orders():
     获取所有订单列表（管理员/商家后台用）
     返回每个订单的基本信息和商品明细
     """
-    orders = Order.query.all()
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if user.role == 'seller':
+        # 商家：查所有包含自己商品的订单
+        orders = (
+            Order.query
+            .join(OrderItem, Order.id == OrderItem.order_id)
+            .join(Product, OrderItem.product_id == Product.id)
+            .filter(Product.seller_id == user_id)
+            .distinct()
+            .order_by(Order.created_at.desc())
+            .all()
+        )
+    else:
+        # 买家：只查自己的订单
+        orders = Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).all()
     return jsonify([
         {
             "id": o.id,
@@ -247,24 +282,45 @@ def ship_order(order_id):
     db.session.commit()
     return jsonify({"message": "订单已发货"}), 200
 
+@api_bp.route('/api/orders/<int:order_id>/confirm', methods=['POST','OPTIONS'] )
+
+@jwt_required()
+def confirm_order(order_id):
+    user_id = get_jwt_identity()
+    order = Order.query.get(order_id)
+    if not order or order.user_id != user_id:
+        return jsonify({"message": "订单不存在"}), 404
+    if order.status != '已发货':
+        return jsonify({"message": "只有已发货订单才能确认收货"}), 400
+    order.status = '已完成'
+    db.session.commit()
+    return jsonify({"message": "订单已确认收货"}), 200
+
 @api_bp.route('/api/orders', methods=['POST'])
 @jwt_required()
 def create_order():
     user_id = get_jwt_identity()
+    user = User.query.get(user_id)
     data = request.get_json()
     items = data.get('items')
     if not items:
         return jsonify({"message": "订单不能为空"}), 400
-    total_amount = 0
-    receiver = data.get('receiver')
-    receiver_phone = data.get('receiver_phone')
-    receiver_address = data.get('receiver_address')
+    
+    total_amount = Decimal('0.00')
     for item in items:
         product = Product.query.get(item['product_id'])
         if not product or product.stock < item['quantity']:
             return jsonify({"message": f"商品 {item['product_id']} 不存在或库存不足"}), 400
-        total_amount += float(product.price) * item['quantity']
-    
+        total_amount += product.price * Decimal(str(item['quantity']))
+    # 余额校验
+    if user.balance < total_amount:
+        return jsonify({"message": "余额不足"}), 400
+    # 扣除余额
+    user.balance -= total_amount
+
+    receiver = data.get('receiver')
+    receiver_phone = data.get('receiver_phone')
+    receiver_address = data.get('receiver_address')
     order = Order(
         user_id=user_id,
         total_amount=total_amount,
@@ -495,6 +551,21 @@ def delete_user(user_id):
     except Exception as e:
         print("删除失败:", e)
         return jsonify({"message": "删除失败", "error": str(e)}), 500
+
+@api_bp.route('/api/seller/profile', methods=['GET'])
+@jwt_required()
+def get_seller_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or user.role != 'seller':
+        return jsonify({"message": "仅商家可查看资料"}), 403
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "phone": user.phone,
+        "balance": float(user.balance),
+        "created_at": user.created_at.isoformat()
+    }), 200
 
 @api_bp.route('/api/seller/profile', methods=['PUT'])
 @jwt_required()
