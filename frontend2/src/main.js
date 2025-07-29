@@ -6,7 +6,15 @@ import 'element-plus/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import ElementPlus from 'element-plus'
-// main.js 或 store/index.js
+
+// 可以在 main.js 里加如下代码，屏蔽这个警告（仅开发环境用）：
+const observerErr = /ResizeObserver loop (limit|completed)/
+const realError = window.onerror
+window.onerror = function (msg, ...args) {
+  if (observerErr.test(msg)) return true
+  return realError && realError(msg, ...args)
+}
+
 const user = JSON.parse(localStorage.getItem('user'));
 if (user) {
   store.commit('setUser', user);

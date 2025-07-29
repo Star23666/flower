@@ -48,10 +48,13 @@
                     </div>
                     <div class="modal-body" v-if="selectedOrder">
                         <p><strong>订单号：</strong>{{ selectedOrder.order_no }}</p>
-                        <p><strong>收货人：</strong>{{ selectedOrder.receiver }}{{ selectedOrder.receiver_phone }}</p>
+                        <p><strong>收货人：</strong>{{ selectedOrder.receiver }}</p>
+                        <p><strong>电话：</strong>{{ selectedOrder.receiver_phone }}</p>
                         <p><strong>地址：</strong>{{ selectedOrder.receiver_address }}</p>
                         <p><strong>下单时间：</strong>{{ selectedOrder.created_at }}</p>
+                        <p><strong>状态：</strong>{{ selectedOrder.status }}</p>
                         <p><strong>备注：</strong>{{ selectedOrder.remark }}</p>
+                        
                         <hr>
                         <h6>商品明细</h6>
                         <table class="table table-sm">
@@ -80,7 +83,13 @@
                         <div class="text-end"><strong>总价：</strong>¥{{ selectedOrder.total_amount }}</div>
                     </div>
                     <div class="modal-footer">
-        <button class="btn btn-secondary" @click="showDetailModal = false">关闭</button>
+        <button class="btn btn-secondary" 
+        @click="showDetailModal = false">关闭</button>
+        <button
+        v-if="selectedOrder && ['已支付', '已发货'].includes(selectedOrder.status)"
+        class="btn btn-warning"
+        @click="handleRefund(selectedOrder)"
+        >申请退款</button>
       </div>
     </div>
   </div>
@@ -133,14 +142,15 @@
       @click="viewOrder(order)"
     >查看</button>
     <button
+      class="btn btn-sm btn-danger"
+      @click="deleteOrder(order)"
+    >删除</button>
+    <button
       class="btn btn-sm btn-success"
       v-if="order.status === '已发货'"
       @click="confirmReceive(order)"
     >确认收货</button>
-    <button
-      class="btn btn-sm btn-danger"
-      @click="deleteOrder(order)"
-    >删除</button>
+    
   </div>
 </td>
           </tr>
@@ -202,6 +212,22 @@ axios.interceptors.request.use(config => {
   },
 
     methods: {
+      
+      async handleRefund(order) {
+        const token = localStorage.getItem('token')
+        const res = await fetch(`http://localhost:5000/api/orders/${order.id}/refund`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (res.ok) {
+          this.$message.success(data.message)
+          this.fetchOrders()
+        } else {
+          this.$message.error(data.message || '退款失败')
+        }
+      },
+
       async confirmReceive(order) {
         try {
           await axios.post(`http://localhost:5000/api/orders/${order.id}/confirm`);

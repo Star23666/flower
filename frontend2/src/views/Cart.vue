@@ -1,8 +1,9 @@
 <template>
 
 
-<div v-if="showPaySuccessModal" class="modal-backdrop show">
-  <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,0.3)">
+<div v-if="showPaySuccessModal">
+  <div class="modal-backdrop show"></div>
+  <div class="modal d-block" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
@@ -356,4 +357,11 @@ export default {
   height: 1em;
   accent-color: #ffc107; /* Bootstrap黄色 */
 }
+
+.modal-content {
+  background: #fff !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
 </style>

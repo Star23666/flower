@@ -29,6 +29,43 @@ const filteredOrders = computed(() => {
   return list
 })
 
+async function approveRefund(order) {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`http://localhost:5000/api/orders/${order.id}/refund/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        ElMessage.success(data.message)
+        store.dispatch('fetchOrders')// 刷新订单列表
+      } else {
+        ElMessage.error(data.message || '操作失败')
+      }
+    } catch (e) {
+      ElMessage.error('网络错误')
+    }
+  }
+async function rejectRefund(order) {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`http://localhost:5000/api/orders/${order.id}/refund/reject`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        ElMessage.success(data.message)
+        store.dispatch('fetchOrders')// 刷新订单列表
+      } else {
+        ElMessage.error(data.message || '操作失败')
+      }
+    } catch (e) {
+      ElMessage.error('网络错误')
+    }
+  }
+
 function showDetail(order) {
   currentOrder.value = order
   dialogVisible.value = true
@@ -101,39 +138,42 @@ async function handleShip(order) {
   </div>
 
 <el-table :data="filteredOrders" border style="margin-top: 10px;">
-  <el-table-column prop="order_no" label="订单号" width="100" show-overflow-tooltip />
+  <el-table-column prop="order_no" label="订单号" width="70" show-overflow-tooltip />
   <el-table-column prop="user_id" label="用户ID" width="70" align="center" />
-  <el-table-column prop="total_amount" label="总价" width="100" align="right" />
+  <el-table-column prop="total_amount" label="总价" width="60" align="right" />
   <el-table-column prop="pay_method" label="支付方式" width="90" align="center" />
   <el-table-column prop="receiver" label="收货人" width="80" align="center" />
   <el-table-column prop="receiver_phone" label="电话" width="80" show-overflow-tooltip />
   <el-table-column prop="receiver_address" label="地址" min-width="60" show-overflow-tooltip />
-  <el-table-column prop="status" label="状态" width="80" align="center" />
+  <el-table-column prop="status" label="状态" width="120" align="center" />
   <el-table-column prop="created_at" label="下单时间" width="100" show-overflow-tooltip />
-  <el-table-column label="操作" width="200" fixed="right" align="center">
+  <el-table-column header-align="center" label="操作" width="200" fixed="right" >
   <template #default="scope">
     <el-button-group>
       <el-button size="small" @click="showDetail(scope.row)">详情</el-button>
       <el-button
-        v-if="scope.row.status === '已支付'"
+      v-show="scope.row.status === '已支付'"
         size="small"
         type="success"
         @click="handleShip(scope.row)"
       >发货</el-button>
       <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
-
+      <!-- <el-button v-if="scope.row.status === '退款审核中'"  @click="approveRefund(scope.row)">同意退款</el-button>
+      <el-button v-if="scope.row.status === '退款审核中'"  @click="rejectRefund(scope.row)">拒绝退款</el-button> -->
     </el-button-group>
   </template>
 </el-table-column>
 </el-table>
 
   <el-dialog v-model="dialogVisible" title="订单详情" width="600px">
-    <div v-if="currentOrder">
+    <div v-show="currentOrder">
       <p>订单号：{{ currentOrder.order_no }}</p>
       <p>下单用户ID：{{ currentOrder.user_id }}</p>
       <p>收货人：{{ currentOrder.receiver }}</p>
       <p>收货电话：{{ currentOrder.receiver_phone }}</p>
       <p>收货地址：{{ currentOrder.receiver_address }}</p>
+      <p>状态：{{ currentOrder.status }}</p>
+      <p>备注：{{ currentOrder.remark }}</p>
       <el-table :data="currentOrder.items" style="margin-top: 10px;">
         <el-table-column prop="product_id" label="商品ID" />
         <el-table-column prop="product_name" label="商品名称" />
@@ -141,5 +181,20 @@ async function handleShip(order) {
         <el-table-column prop="unit_price" label="单价" />
       </el-table>
     </div>
+    <template #footer>
+    <div style="text-align: right">
+      <el-button @click="dialogVisible = false">关闭</el-button>
+      <el-button
+      v-show="currentOrder && currentOrder.status === '退款审核中'"
+        type="warning"
+        @click="approveRefund(currentOrder)"
+      >同意退款</el-button>
+      <el-button
+      v-show="currentOrder && currentOrder.status === '退款审核中'"
+        type="info"
+        @click="rejectRefund(currentOrder)"
+      >拒绝退款</el-button>
+    </div>
+  </template>
   </el-dialog>
 </template>

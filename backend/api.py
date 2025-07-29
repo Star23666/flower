@@ -6,7 +6,7 @@ from flask import Blueprint
 from db import db
 from werkzeug.utils import secure_filename
 import os
-
+from flask_cors import cross_origin
 from decimal import Decimal
 
 import time
@@ -140,41 +140,6 @@ def delete_product(product_id):
     db.session.commit()
     return jsonify({"message": "商品删除成功"}), 200
 
-@api_bp.route('/api/seller/orders', methods=['GET'])
-@jwt_required()
-def get_seller_orders():
-    user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
-    if user.role != 'seller':
-        return jsonify({"message": "仅商家可查看订单"}), 403
-    orders = (
-    Order.query
-    .join(OrderItem, Order.id == OrderItem.order_id)
-    .join(Product, OrderItem.product_id == Product.id)
-    .filter(Product.seller_id == user_id)
-    .distinct()
-    .order_by(Order.created_at.desc())
-    .all()
-    )
-    print('orders:', orders)
-    print('seller_id:', user_id)
-    print('type(user_id):', type(user_id))
-    from sqlalchemy import inspect
-    print('type(Product.seller_id):', inspect(Product).columns.seller_id.type)
-    # orders = Order.query.join(OrderItem).join(Product).filter(Product.seller_id == user_id).all()
-    return jsonify([{
-        "id": o.id,
-        "user_id": o.user_id,
-        "total_amount": float(o.total_amount),
-        "status": o.status,
-        "created_at": o.created_at.isoformat(),
-        "items": [{
-            "product_id": i.product_id, 
-            "quantity": i.quantity, 
-            "unit_price": float(i.unit_price)
-        } for i in o.items]
-    } for o in orders]), 200
-
 @api_bp.route('/api/orders', methods=['GET'])
 @jwt_required()
 def get_orders():
@@ -283,9 +248,11 @@ def ship_order(order_id):
     return jsonify({"message": "订单已发货"}), 200
 
 @api_bp.route('/api/orders/<int:order_id>/confirm', methods=['POST','OPTIONS'] )
-
-@jwt_required()
+@jwt_required(optional=True) # 让 OPTIONS 不报错，但 POST 还是需要 token。
 def confirm_order(order_id):
+    if request.method == 'OPTIONS':
+        # 预检请求直接返回
+        return '', 204
     user_id = get_jwt_identity()
     order = Order.query.get(order_id)
     if not order or order.user_id != user_id:
@@ -295,6 +262,63 @@ def confirm_order(order_id):
     order.status = '已完成'
     db.session.commit()
     return jsonify({"message": "订单已确认收货"}), 200
+
+@api_bp.route('/api/orders/<int:order_id>/refund', methods=['POST'])
+@jwt_required()
+def apply_refund(order_id):
+    user_id = int(get_jwt_identity())
+    order = Order.query.get(order_id)
+    if not order or order.user_id != user_id:
+        return jsonify({'message': '订单不存在或无权限'}), 404
+
+    if order.status == '已支付':
+        # 立即退款
+        order.status = '已退款'
+        # 返还余额
+        user = User.query.get(user_id)
+        user.balance += order.total_amount
+        db.session.commit()
+        return jsonify({'message': '退款成功，金额已原路退回'}), 200
+    elif order.status == '已发货':
+        # 进入审核
+        order.status = '退款审核中'
+        db.session.commit()
+        return jsonify({'message': '退款申请已提交，等待审核'}), 200
+    else:
+        return jsonify({'message': '当前状态不可退款'}), 400
+
+@api_bp.route('/api/orders/<int:order_id>/refund/approve', methods=['POST', 'OPTIONS'])
+@cross_origin()
+@jwt_required()
+def approve_refund(order_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    # 仅商家或管理员可操作
+    if user.role not in ['seller', 'admin']:
+        return jsonify({'message': '无权限'}), 403
+    order = Order.query.get(order_id)
+    if order.status != '退款审核中':
+        return jsonify({'message': '订单状态不正确'}), 400
+    order.status = '已退款'
+    buyer = User.query.get(order.user_id)
+    buyer.balance += order.total_amount
+    db.session.commit()
+    return jsonify({'message': '退款审核通过，已退款'}), 200
+
+@api_bp.route('/api/orders/<int:order_id>/refund/reject', methods=['POST', 'OPTIONS'])
+@cross_origin()
+@jwt_required()
+def reject_refund(order_id):
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if user.role not in ['seller', 'admin']:
+        return jsonify({'message': '无权限'}), 403
+    order = Order.query.get(order_id)
+    if order.status != '退款审核中':
+        return jsonify({'message': '订单状态不正确'}), 400
+    order.status = '退款被拒绝'
+    db.session.commit()
+    return jsonify({'message': '已拒绝退款'}), 200
 
 @api_bp.route('/api/orders', methods=['POST'])
 @jwt_required()
