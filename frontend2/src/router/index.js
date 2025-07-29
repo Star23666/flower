@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomePage from '../views/Home.vue';
+import HomePage from '../views/HomePage.vue';
 import ProductListPage from '../views/ProductList.vue';
 import ShoppingCart from '../views/Cart.vue';
 import UserLogin from '../views/UserLogin.vue';
@@ -14,18 +14,15 @@ import Profile from '@/views/seller/SellerProfile.vue';
 import FlowerCategoryManage from '@/views/seller/FlowerCategoryManage.vue';
 import UserProfile from '@/views/UserProfile.vue';
 import OrderList from '@/views/OrderList.vue';
+import MainLayout from '@/views/MainLayout.vue';
 
 const routes = [
-  { path: '/', component: UserLogin },
+  { path: '/main', component: MainLayout },
   { path: '/seller/new', name: 'SellerNew', component: () => import('@/views/seller/SellerNew.vue') },
-  { path: '/home', component: HomePage },
-  { path: '/products', component: ProductListPage },
-  { path: '/cart', component: ShoppingCart },
   { path: '/login', component: UserLogin },
   { path: '/register', component: UserRegister },
   { path: '/add-product', component: AddProduct },
   { path: '/seller/login', component: SellerLogin },
-  { path: '/user/profile', component: UserProfile },
   { path: '/order-list', component: OrderList },
   {
     path: '/seller',
@@ -44,6 +41,21 @@ const routes = [
     path: '/product/:id',
     name: 'ProductDetail',
     component: () => import('@/views/ProductDetail.vue')
+  },
+
+  // 轮播图
+  {
+    path: '/',
+    component: MainLayout,
+    children: [
+      { path: 'home', component: HomePage },
+      { path: 'cart', component: ShoppingCart },
+      { path: 'user/profile', component: UserProfile },
+      { path: 'products', component: ProductListPage },
+      { path: 'order-list', component: OrderList },
+      { path: 'product/:id', name: 'ProductDetail', component: () => import('@/views/ProductDetail.vue') },
+      // ...其它子页面
+    ]
   }
 ];
 

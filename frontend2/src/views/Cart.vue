@@ -1,6 +1,5 @@
 <template>
-
-
+  
 <div v-if="showPaySuccessModal">
   <div class="modal-backdrop show"></div>
   <div class="modal d-block" tabindex="-1">
@@ -31,14 +30,14 @@
   </div>
   <div class="carousel-inner" >
     <div class="carousel-item active" >
-      <img :src="banner3" class="d-block w-100" style="height:320px;object-fit:cover;" alt="banner1">
+      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner1">
       
     </div>
     <div class="carousel-item" >
-      <img :src="banner3" class="d-block w-100" style="height:320px;object-fit:cover;" alt="banner2">
+      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner2">
     </div>
     <div class="carousel-item" >
-      <img :src="banner3" class="d-block w-100" style="height:320px;object-fit:cover;" alt="banner3">
+      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner3">
     </div>
   </div>
   <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
