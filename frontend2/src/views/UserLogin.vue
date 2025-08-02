@@ -99,7 +99,7 @@ const login = async () => {
       password: form.password,
       type: 'user'
     })
-    router.push('/products')
+    router.push('/home')
   } catch (e) {
     error.value = '用户名或密码错误'
   } finally {

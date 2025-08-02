@@ -46,7 +46,15 @@ class Product(db.Model):
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(10), default='active')  # 'active' 上架, 'inactive' 下架
     target = db.Column(db.String(100))  # 适用对象字段，如“恋人”、“朋友”、“长辈”等
-
+    # 为 Product 模型添加 to_dict 方法
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "price": self.price,
+            "image_url": self.image_url,
+            # 你可以根据实际字段补充更多信息
+        }
 class Order(db.Model):
     __tablename__ = 'orders'
     id = db.Column(db.Integer, primary_key=True)
@@ -82,3 +90,37 @@ class Address(db.Model):
     realname = db.Column(db.String(50))
     phone = db.Column(db.String(20))
     address = db.Column(db.String(255))
+
+class UserFavorite(db.Model):
+    __tablename__ = 'user_favorites'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # 添加唯一约束，确保用户不能重复收藏同一商品
+    __table_args__ = (db.UniqueConstraint('user_id', 'product_id', name='_user_product_uc'),)
+    
+    # 关系
+    product = db.relationship('Product', backref='favorited_by_users')
+    user = db.relationship('User', backref='favorites')
+
+# 点赞
+class Like(db.Model):
+    __tablename__ = 'likes'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('user_id', 'product_id', name='unique_user_product_like'),)
+
+# 评论区
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='comments')

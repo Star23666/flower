@@ -1,12 +1,11 @@
 from flask import request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import User, Category, Product, Order, OrderItem,Address
+from models import User, Category,Product, Order, OrderItem,Address,UserFavorite,Like,Comment
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import Blueprint
 from db import db
 from werkzeug.utils import secure_filename
 import os
-from flask_cors import cross_origin
 from decimal import Decimal
 
 import time
@@ -57,7 +56,10 @@ def seller_login():
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误，或非商家账号"}), 401
     access_token = create_access_token(identity=user.id)
-    return jsonify({"access_token": access_token, "username": user.username,"role": user.role}), 200
+    return jsonify({
+        "access_token": access_token, 
+        "username": user.username,
+        "role": user.role}), 200
 
 @api_bp.route('/api/seller/products', methods=['POST'])
 @jwt_required()
@@ -288,7 +290,6 @@ def apply_refund(order_id):
         return jsonify({'message': '当前状态不可退款'}), 400
 
 @api_bp.route('/api/orders/<int:order_id>/refund/approve', methods=['POST', 'OPTIONS'])
-@cross_origin()
 @jwt_required()
 def approve_refund(order_id):
     user_id = get_jwt_identity()
@@ -306,7 +307,6 @@ def approve_refund(order_id):
     return jsonify({'message': '退款审核通过，已退款'}), 200
 
 @api_bp.route('/api/orders/<int:order_id>/refund/reject', methods=['POST', 'OPTIONS'])
-@cross_origin()
 @jwt_required()
 def reject_refund(order_id):
     user_id = get_jwt_identity()
@@ -400,11 +400,19 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-    user = User.query.filter_by(username=username,role='user').first()
+    user = User.query.filter_by(
+        username=username,
+        role='user',
+        ).first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误"}), 401
     access_token = create_access_token(identity=user.id)
-    return jsonify({"access_token": access_token, "username": user.username, "role": user.role}), 200
+    return jsonify({
+        "access_token": access_token, 
+        "username": user.username, 
+        "role": user.role,
+        "avatar": user.avatar,
+        }), 200
 
 @api_bp.route('/api/products', methods=['GET'])
 def get_products():
@@ -425,7 +433,7 @@ def get_products():
 def get_product_detail(product_id):
     product = Product.query.get(product_id)
     if not product:
-        return jsonify({'error': 'Product not found'}), 404
+        return jsonify({'error': '商品不存在'}), 404
     return jsonify({
         "id": product.id,
         "name": product.name,
@@ -437,7 +445,9 @@ def get_product_detail(product_id):
         "target": product.target,
         # 如有其它字段，继续补充
         "flower_language": getattr(product, "flower_language", None),
-        "scene": getattr(product, "scene", None)
+        "scene": getattr(product, "scene", None),
+        # 点赞数量
+        "like_count": Like.query.filter_by(product_id=product.id).count()
     }), 200
 
 
@@ -716,3 +726,164 @@ def delete_user_address(address_id):
     db.session.delete(addr)
     db.session.commit()
     return jsonify({"message": "删除成功"}), 200
+
+
+# 添加收藏
+@api_bp.route('/api/favorites', methods=['POST' , 'OPTIONS'])
+@jwt_required()
+def add_favorite():
+    if request.method == 'OPTIONS':
+        return jsonify({}),200
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    product_id = data.get('product_id')
+    
+    if not product_id:
+        return jsonify({'error': '缺少商品ID'}), 400
+    
+    # 检查是否已收藏
+    if UserFavorite.query.filter_by(user_id=user_id, product_id=product_id).first():
+        return jsonify({'error': '该商品已在收藏夹中'}), 400
+    
+    favorite = UserFavorite(user_id=user_id, product_id=product_id)
+    db.session.add(favorite)
+    db.session.commit()
+    
+    return jsonify({'message': '收藏成功'}), 201
+
+# 获取用户收藏列表
+@api_bp.route('/api/favorites', methods=['GET'])
+@jwt_required()
+def get_favorites():
+    try:
+        user_id = get_jwt_identity()
+        print(f"获取用户 {user_id} 的收藏列表")  # 添加日志
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+    
+        # 获取用户收藏的商品（带分页）
+        favorites = UserFavorite.query.filter_by(user_id=user_id).order_by(
+            UserFavorite.created_at.desc()
+        ).paginate(page=page, per_page=per_page, error_out=False)
+    
+        print(f"找到 {favorites.total} 个收藏项")  # 添加日志
+
+        return jsonify({
+            'items': [
+                favorite.product.to_dict() if favorite.product else None
+                for favorite in favorites.items
+            ],
+            'total': favorites.total,
+            'pages': favorites.pages,
+            'current_page': favorites.page
+        })
+    except Exception as e:
+        print(f"获取收藏列表时出错: {str(e)}")  # 添加错误日志
+        return jsonify({'error': str(e)}), 500
+# 取消收藏
+@api_bp.route('/api/favorites/<int:product_id>', methods=['DELETE'])
+@jwt_required()
+def remove_favorite(product_id):
+    user_id = get_jwt_identity()
+    
+    favorite = UserFavorite.query.filter_by(
+        user_id=user_id, 
+        product_id=product_id
+    ).first_or_404()
+    
+    db.session.delete(favorite)
+    db.session.commit()
+    
+    return jsonify({'message': '已取消收藏'})
+
+@api_bp.route('/api/favorites/check', methods=['GET'])
+@jwt_required()
+def check_favorite():
+    user_id = get_jwt_identity()
+    product_id = request.args.get('product_id', type=int)
+    
+    if not product_id:
+        return jsonify({'error': '缺少商品ID'}), 400
+    
+    is_favorited = UserFavorite.query.filter_by(
+        user_id=user_id,
+        product_id=product_id
+    ).first() is not None
+    
+    return jsonify({'is_favorited': is_favorited})
+
+# 点赞
+@api_bp.route('/api/products/<int:product_id>/like', methods=['POST'])
+@jwt_required()
+def like_product(product_id):
+    user_id = get_jwt_identity()
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'message': '商品不存在'}), 404
+
+    # 检查是否已点赞
+    existing = Like.query.filter_by(user_id=user_id, product_id=product_id).first()
+    if existing:
+        return jsonify({'message': '您已点赞过该商品'}), 400
+
+    like = Like(user_id=user_id, product_id=product_id)
+    db.session.add(like)
+    db.session.commit()
+
+    # 可选：返回当前点赞数
+    like_count = Like.query.filter_by(product_id=product_id).count()
+    return jsonify({'message': '点赞成功', 'like_count': like_count}), 200
+
+@api_bp.route('/api/products/<int:product_id>/like', methods=['DELETE'])
+@jwt_required()
+def unlike_product(product_id):
+    user_id = get_jwt_identity()
+    like = Like.query.filter_by(user_id=user_id, product_id=product_id).first()
+    if not like:
+        return jsonify({'message': '您未点赞该商品'}), 400
+    db.session.delete(like)
+    db.session.commit()
+    like_count = Like.query.filter_by(product_id=product_id).count()
+    return jsonify({'message': '取消点赞成功', 'like_count': like_count}), 200
+
+@api_bp.route('/api/products/<int:product_id>/like/status', methods=['GET'])
+@jwt_required(optional=True)
+def like_status(product_id):
+    user_id = get_jwt_identity()
+    liked = False
+    if user_id:
+        liked = Like.query.filter_by(user_id=user_id, product_id=product_id).first() is not None
+    like_count = Like.query.filter_by(product_id=product_id).count()
+    return jsonify({'liked': liked, 'like_count': like_count})
+
+# 评论区
+# 获取商品评论
+@api_bp.route('/api/products/<int:product_id>/comments', methods=['GET'])
+def get_comments(product_id):
+    comments = Comment.query.filter_by(product_id=product_id).order_by(Comment.created_at.desc()).all()
+    data = [{
+        'id': c.id,
+        'username': c.user.username,
+        'avatar': c.user.avatar,  # 新增头像字段
+        'content': c.content,
+        'created_at': c.created_at.isoformat()
+    } for c in comments]
+    return jsonify(data)
+
+# 新增评论
+@api_bp.route('/api/products/<int:product_id>/comments', methods=['POST'])
+@jwt_required()
+def add_comment(product_id):
+    user_id = get_jwt_identity()
+    content = request.json.get('content')
+    print('收到评论:', user_id, product_id, content)
+    try:
+        comment = Comment(product_id=product_id, user_id=user_id, content=content)
+        db.session.add(comment)
+        db.session.commit()
+        print('评论已保存')
+        return jsonify({'message': '评论成功'})
+    except Exception as e:
+        db.session.rollback()
+        print('评论保存异常:', e)
+        return jsonify({'message': '评论保存失败', 'error': str(e)}), 500

@@ -1,6 +1,5 @@
 <template>
     <div>
-      <h4 class="mb-3 text-center">我的订单</h4>
       <div class="order-filter-bar d-flex align-items-center justify-content-between mb-3">
     <!-- 状态Tab -->
     <div class="btn-group" role="group">
@@ -99,18 +98,18 @@
       <table class="table table-bordered">
         <thead>
           <tr class="align-middle">
-            <th style="width:150px;">订单号</th>
+            <th style="width:100px;">订单号</th>
             <th style="width:100px;">商品</th>
             <th style="width:50px;">总价</th> 
             <th style="width:100px;">状态</th>                               
-            <th style="width:150px;">下单时间</th>
-            <th style="width:150px;" class="text-center">操作</th>
+            <th style="width:100px;">下单时间</th>
+            <th style="width:200px;" class="text-center">操作</th>
           </tr>
         </thead>
         <tbody class="align-middle">
           <tr v-for="order in filteredOrders" :key="order.id">
             <td>
-            <div style="width:150px;overflow:hidden;
+            <div style="width:100px;overflow:hidden;
             text-overflow:ellipsis;
             white-space:nowrap;" 
             :title="order.order_no">
@@ -131,7 +130,7 @@
                 <span>{{ getStatusText(order.status) }}</span>
             </td>
             <td>
-                <div style="width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="order.created_at">
+                <div style="width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="order.created_at">
                     {{ order.created_at }}
                 </div>
             </td>

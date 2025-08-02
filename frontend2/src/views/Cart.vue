@@ -28,18 +28,6 @@
     <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"></button>
     <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"></button>
   </div>
-  <div class="carousel-inner" >
-    <div class="carousel-item active" >
-      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner1">
-      
-    </div>
-    <div class="carousel-item" >
-      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner2">
-    </div>
-    <div class="carousel-item" >
-      <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner3">
-    </div>
-  </div>
   <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
     <span class="carousel-control-prev-icon"></span>
   </button>

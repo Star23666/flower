@@ -6,6 +6,10 @@ import 'element-plus/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import ElementPlus from 'element-plus'
+// Element Plus 的图标
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+
+
 
 // 可以在 main.js 里加如下代码，屏蔽这个警告（仅开发环境用）：
 const observerErr = /ResizeObserver loop (limit|completed)/
@@ -20,6 +24,10 @@ if (user) {
   store.commit('setUser', user);
 }
 const app = createApp(App);
+
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component)
+}
 app.use(router);
 app.use(store);
 app.use(ElementPlus)

@@ -16,7 +16,12 @@ import UserProfile from '@/views/UserProfile.vue';
 import OrderList from '@/views/OrderList.vue';
 import MainLayout from '@/views/MainLayout.vue';
 
+
 const routes = [
+  {
+    path:'/',
+    redirect:'/login'
+  },
   { path: '/main', component: MainLayout },
   { path: '/seller/new', name: 'SellerNew', component: () => import('@/views/seller/SellerNew.vue') },
   { path: '/login', component: UserLogin },
@@ -29,11 +34,11 @@ const routes = [
     component: SellerDashboard,
     meta: { requiresSeller: true },
     children: [
-      { path: 'products', component: ProductManage, meta: { requiresSeller: true } },
-      { path: 'orders', component: OrderManage, meta : { requiresSeller: true } },
-      { path: 'users', component: UserManage, meta:{ requiresSeller: true }},
-      { path: 'profile', component: Profile, meta : { requiresSeller:true} },
-      { path: 'flower-categories', component: FlowerCategoryManage, meta : { requiresSeller:true} },
+      { path: 'products', component: ProductManage, meta: { requiresSeller: true ,breadcrumb: '商品'} },
+      { path: 'orders', component: OrderManage, meta : { requiresSeller: true ,breadcrumb: '订单'} },
+      { path: 'users', component: UserManage, meta:{ requiresSeller: true ,breadcrumb: '用户'}},
+      { path: 'profile', component: Profile, meta : { requiresSeller:true ,breadcrumb: '商家信息'} },
+      { path: 'flower-categories', component: FlowerCategoryManage, meta : { requiresSeller:true ,breadcrumb: '花材分类'} },
       { path: '', redirect: '/seller/products' },
     ]
   },
@@ -50,10 +55,10 @@ const routes = [
     children: [
       { path: 'home', component: HomePage },
       { path: 'cart', component: ShoppingCart },
-      { path: 'user/profile', component: UserProfile },
+      { path: 'user/profile', component: UserProfile ,meta:{breadcrumb: '个人中心'}},
       { path: 'products', component: ProductListPage },
       { path: 'order-list', component: OrderList },
-      { path: 'product/:id', name: 'ProductDetail', component: () => import('@/views/ProductDetail.vue') },
+      { path: 'product/:id', name: 'ProductDetail', component: () => import('@/views/ProductDetail.vue'),meta:{breadcrumb: '鲜花详情' }},
       // ...其它子页面
     ]
   }

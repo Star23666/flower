@@ -1,12 +1,12 @@
 <template>
 <!-- 轮播图 -->
 <div id="carouselExampleIndicators" class="carousel slide mb-4" data-bs-ride="carousel" data-bs-interval="2500">
-  <div class="carousel-indicators">
+  <!-- <div class="carousel-indicators">
     <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active"></button>
     <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"></button>
     <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"></button>
-  </div>
-  <div class="carousel-inner" >
+  </div> -->
+  <!-- <div class="carousel-inner" >
     <div class="carousel-item active" >
       <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner1">
       
@@ -17,7 +17,7 @@
     <div class="carousel-item" >
       <img :src="banner3" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner3">
     </div>
-  </div>
+  </div> -->
   <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
     <span class="carousel-control-prev-icon"></span>
   </button>

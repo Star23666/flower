@@ -31,6 +31,22 @@
   </el-row>
 </div>
 </div>
+
+<div class="random-products-grid-grid">
+  <div
+    v-for="(item, idx) in randomProducts"
+    :key="item.id"
+    class="custom-card"
+    :class="{ 'vertical-card': isVerticalCard(idx) }"
+    @click="goToProduct(item.id)"
+  >
+    <img :src="getImageUrl(item.image_url)" class="custom-card-img" />
+    <div class="custom-card-title">
+      {{ item.name }}
+    </div>
+  </div>
+</div>
+
 <div class="home-footer">
   <p>鲜花商店 · 让生活如花绽放 | 客服微信：flower_support</p>
 </div>
@@ -38,6 +54,52 @@
 </template>
 
 <script setup>
+
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import axios from 'axios'
+
+
+const router = useRouter()
+const products = ref([])
+const randomProducts = ref([])
+
+const fetchProducts = async () => {
+  const res = await axios.get('http://localhost:5000/api/products')
+  console.log(res.data)
+  
+  products.value = Array.isArray(res.data) ? res.data : []
+  // 随机打乱并取前6个
+  randomProducts.value = products.value
+    .map(p => ({...p}))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 6)
+}
+
+const goToProduct = (id) => {
+  router.push(`/product/${id}`)
+}
+
+// 图片
+const getImageUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http')
+    ? url
+    : `http://localhost:5000${url}`
+}
+
+
+// 第1和第个商品为竖卡，其余横卡
+const isVerticalCard = idx => idx === 0 || idx === 2
+// const getColSpan = idx => isVerticalCard(idx) ? 6 : 6
+// const getColStyle = idx => isVerticalCard(idx)
+//   ? { display: 'flex', flexDirection: 'column', height: '540px' }
+//   : { height: '260px' }
+
+onMounted(() => {
+  fetchProducts()
+})
+
 
 </script>
 
@@ -124,4 +186,34 @@
   border-radius: 12px;
 }
 
+
+/* 商品卡片 */
+.random-products-grid-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 四列宫格 */
+  grid-auto-rows: 260px;                 /* 横卡高度 */
+  gap: 24px;
+  margin: 40px auto 0;
+  max-width: 1100px;
+}
+
+.custom-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px #e0c3fc22;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.custom-card.vertical-card {
+  grid-row: span 2; /* 竖卡占两行 */
+  height: 100%;
+}
 </style>

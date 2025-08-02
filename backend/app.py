@@ -6,7 +6,7 @@ from datetime import timedelta
 import os
 from dotenv import load_dotenv
 from flask import send_from_directory
-
+from api import api_bp # 导入 api.py 以注册路由
 load_dotenv()
 
 # 1. BASE_DIR 表示项目的根目录（flask-shop）
@@ -32,9 +32,20 @@ db.init_app(app)
 
 # 初始化 JWT 和 CORS
 jwt = JWTManager(app)
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:8080"}} , supports_credentials=True)
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": ["http://localhost:8080"],
+            "supports_credentials": True,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "expose_headers": ["Content-Type", "Authorization"]
+        }
+    }
+)
 
-from api import api_bp # 导入 api.py 以注册路由
+
 app.register_blueprint(api_bp)
 if __name__ == '__main__':
     with app.app_context():

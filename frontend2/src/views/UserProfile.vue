@@ -1,7 +1,35 @@
 <template>
+  <div class="user-profile">
+  
     <el-row :gutter="40">
-      <!-- 左侧：基本信息 -->
-      <el-col :span="10">
+    <!-- 左侧：导航栏 -->
+    <el-col :span="4">
+        <el-menu 
+          class="user-menu"
+          :default-active="activeMenu" 
+          @select="handleMenuSelect"
+        >
+        <el-menu-item index="info">
+            <el-icon><User /></el-icon>
+            <span>基本信息</span>
+          </el-menu-item>
+          <el-menu-item index="orders">
+            <el-icon><Document /></el-icon>
+            <span>我的订单</span>
+          </el-menu-item>
+          <el-menu-item index="address">
+            <el-icon><Location /></el-icon>
+            <span>我的地址</span>
+          </el-menu-item>
+          <el-menu-item index="favorites">
+            <el-icon><Star /></el-icon>
+            <span>我的收藏</span>
+          </el-menu-item>
+        </el-menu>
+    </el-col>
+      <!-- 右侧：基本信息 -->
+      <el-col :span="20" >
+        <div v-show="activeMenu === 'info'">
         <h2>基本信息</h2>
         <el-form :model="userForm" label-width="80px" style="max-width: 400px">
           <el-form-item label="头像">
@@ -67,12 +95,18 @@
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="saveUserInfo">修改</el-button>
+            <el-button type="danger" @click="logout">退出登录</el-button>
           </el-form-item>
         </el-form>
-      </el-col>
-  
+      </div>
+
+      <div v-show="activeMenu === 'orders'" class="orders-section">
+  <h2>我的订单</h2>
+  <OrderList />
+</div>
+
       <!-- 右侧：收货地址 -->
-      <el-col :span="14">
+        <div v-show="activeMenu=== 'address'">
         <h2>收货地址</h2>
         <el-button type="success" @click="showAddDialog = true" style="margin-bottom: 10px;">+ 新增</el-button>
         <el-dialog v-model="showAddDialog" title="新增收货地址">
@@ -129,14 +163,72 @@
           @current-change="handlePageChange"
           style="margin-top: 10px;"
         />
-      </el-col>
+      </div>
+
+<!-- 我的收藏 -->
+<div v-show="activeMenu === 'favorites'" class="favorites-section">
+  <h2>我的收藏</h2>
+
+  <el-empty v-if="favorites.length === 0" description="暂无收藏商品" />
+  
+  <div v-else class="favorites-grid">
+  <div v-for="item in filteredFavorites" :key="item.id" class="favorite-item">
+    <router-link
+      :to="{ path: `/product/${item.id}`, 
+        query: { from: 'favorites' } }"
+      class="product-link"
+      style="display:block;
+      text-decoration:none;
+      color:inherit"
+    >
+      <img :src="getProductImage(item)" class="product-image" />
+      <div class="product-info">
+        <h3>{{ item.name }}</h3>
+        <div class="product-price">¥{{ item.price }}</div>
+      </div>
+    </router-link>
+    <div class="product-actions">
+      <el-button 
+        type="danger" 
+        size="small" 
+        @click.stop="removeFavorite(item.id)"
+        :loading="loading[item.id]"
+      >
+        <el-icon><StarFilled /></el-icon>
+        取消收藏
+      </el-button>
+    </div>
+  </div>
+</div>
+</div>
+      
+    </el-col>
     </el-row>
+  </div>
   </template>
   
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted,watch,computed } from 'vue'
 import { ElMessage , ElMessageBox } from 'element-plus'
+import { Star, User, Document, Location } from '@element-plus/icons-vue'
+import { StarFilled } from '@element-plus/icons-vue'
 
+import OrderList from './OrderList.vue'
+
+import { useRouter,useRoute } from 'vue-router'
+import { useStore } from 'vuex'
+
+// 退出登录
+
+const router = useRouter()
+const store = useStore()
+
+
+// 添加收藏相关的响应式数据和函数：
+const favorites = ref([])
+const loading = ref({})
+
+const activeMenu = ref('info') // 默认选中“基本信息”标签
 //地址编辑
 const showEditDialog = ref(false)
 const editForm = ref({
@@ -169,8 +261,11 @@ const userForm = ref({
 // 收货地址数据（初始为空）
 const addressList = ref([])
 const addressTotal = ref(0)
-const pageSize = ref(2)
+const pageSize = ref(10)
 const currentPage = ref(1)
+
+
+const route = useRoute()
 
 
 const showRechargeDialog = ref(false)
@@ -178,6 +273,18 @@ const rechargeForm = ref({
   amount: 0,
   payType: '微信'
 })
+
+// 监听路由的 query：
+onMounted(() => {
+  if (route.query.menu === 'favorites') {
+    activeMenu.value = 'favorites'
+  }
+})
+
+//菜单栏绑定事件
+function handleMenuSelect(index) {
+  activeMenu.value = index
+}
 
 async function confirmRecharge() {
   if (!rechargeForm.value.amount || rechargeForm.value.amount <= 0) {
@@ -366,9 +473,224 @@ async function submitAddAddress() {
     ElMessage.error(data.message)
   }
 }
+const fetchFavorites = async () => {
+  
+  try {
+    
+    console.log('开始获取收藏列表...')
+    const token = localStorage.getItem('token')
+    console.log('Token:', token)  // 检查token是否存在
+
+    const res = await fetch('http://localhost:5000/api/favorites', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include'
+    })
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}))
+      throw new Error(error.message || '获取收藏列表失败')
+    }
+    const data = await res.json()
+    console.log('收藏接口返回数据:', data)
+    console.log('data.items:', data.items) //
+    favorites.value = (data.items || []).filter(Boolean)
+    console.log('filteredFavorites:', filteredFavorites.value)
+
+  } catch (error) {
+    console.error('获取收藏列表失败:', error)
+    ElMessage.error('获取收藏列表失败')
+    
+  }
+}
+
+const removeFavorite = async (productId) => {
+  try {
+    loading.value[productId] = true
+    const token = localStorage.getItem('token')
+    const res = await fetch(`http://localhost:5000/api/favorites/${productId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (res.ok) {
+      ElMessage.success('已取消收藏')
+      fetchFavorites()
+    }
+  } catch (error) {
+    console.error('取消收藏失败:', error)
+    ElMessage.error('取消收藏失败')
+  } finally {
+    loading.value[productId] = false
+  }
+}
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+  // 如果你需要根据页码重新获取数据，可以在这里调用相应的方法
+  // 例如：fetchAddresses()
+}
+
+
+const filteredFavorites = computed(() => (favorites.value || []).filter(Boolean))
+
+const getProductImage = (product) => {
+  if (!product || !product.image_url) {
+    // 返回一个默认图片
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWVlZWVlIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1JSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5OTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'
+  }
+  if (product.image_url.startsWith('http')) {
+    return product.image_url
+  }
+  return `http://localhost:5000${product.image_url}`
+}
+
+// 退出登录
+function logout() {
+  store.commit('setUser', null)
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  router.push('/login')
+}
+
+watch(activeMenu, (newVal) => {
+  console.log('activeMenu 变化:', newVal)
+  if (newVal === 'favorites' || newVal === '/favorites') {
+    console.log('触发获取收藏列表')
+    fetchFavorites()
+  }
+})
+
 // 页面加载时自动调用
 onMounted(() => {
   fetchUserProfile()
   fetchUserAddresses()
 })
 </script>
+
+<style scoped>
+.profile-sidebar {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  margin-right: 20px;
+  height: fit-content;
+}
+.sidebar-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #333;
+  padding-left: 10px;
+}
+.profile-menu {
+  border-right: none;
+}
+.user-profile {
+  padding: 20px;
+}
+.user-menu {
+  border-right: none;
+}
+
+.favorites-section {
+  padding: 20px;
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.favorite-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.favorite-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.product-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.product-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.product-info {
+  padding: 15px;
+}
+
+.product-info h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-price {
+  color: #f56c6c;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.product-actions {
+  padding: 0 15px 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.product-actions .el-button {
+  flex: 1;
+}
+
+.orders-section {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 0;
+}
+
+.orders-section .el-table .el-table__cell {
+  padding: 12px 8px !important;
+  font-size: 15px;
+}
+.orders-section .el-table__row {
+  height: 48px;
+}
+
+.el-form-item .el-button {
+  margin-right: 16px;
+  min-width: 100px;
+  font-size: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.08);
+  transition: box-shadow 0.2s;
+}
+.el-form-item .el-button:last-child {
+  margin-right: 0;
+}
+.el-form-item .el-button:hover {
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.18);
+}
+
+
+</style>
