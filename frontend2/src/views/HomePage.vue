@@ -34,16 +34,17 @@
 
 <div class="random-products-grid-grid">
   <div
-    v-for="(item, idx) in randomProducts"
-    :key="item.id"
+    v-for="item in recommendedProducts "
+    :key="item.product_id"
     class="custom-card"
-    :class="{ 'vertical-card': isVerticalCard(idx) }"
-    @click="goToProduct(item.id)"
+    @click="goToProduct(item.product_id)"
   >
     <img :src="getImageUrl(item.image_url)" class="custom-card-img" />
     <div class="custom-card-title">
       {{ item.name }}
     </div>
+    <!-- 新增：推荐标识 -->
+    <div v-if="item.pred_score" class="recommend-badge">推荐</div>
   </div>
 </div>
 
@@ -62,19 +63,35 @@ import axios from 'axios'
 
 const router = useRouter()
 const products = ref([])
-const randomProducts = ref([])
+const randomProducts = ref([])  
+
+const recommendedProducts = ref([]);  // 新增推荐数据
 
 const fetchProducts = async () => {
   const res = await axios.get('http://localhost:5000/api/products')
   console.log(res.data)
-  
+  console.log(products.value)
   products.value = Array.isArray(res.data) ? res.data : []
-  // 随机打乱并取前6个
+  // 随机打乱并取前4个
   randomProducts.value = products.value
     .map(p => ({...p}))
     .sort(() => Math.random() - 0.5)
-    .slice(0, 6)
+    .slice(0, 4)
 }
+
+const fetchRecommendations = async () => {
+  const userId = 1;  // 假设用户ID为1，可以从登录状态获取
+  try {
+    const res = await axios.get(`http://localhost:5000/api/recommend/${userId}`);
+    if (res.data.code === 200) {
+      recommendedProducts.value = res.data.data.slice(0, 4);  // 取前4个推荐
+    }
+  } catch (error) {
+    console.error('推荐加载失败', error);
+    // 如果推荐失败，回退到随机
+    fetchProducts();
+  }
+};
 
 const goToProduct = (id) => {
   router.push(`/product/${id}`)
@@ -90,14 +107,15 @@ const getImageUrl = (url) => {
 
 
 // 第1和第个商品为竖卡，其余横卡
-const isVerticalCard = idx => idx === 0 || idx === 2
+// const isVerticalCard = idx => idx === 0 || idx === 2
 // const getColSpan = idx => isVerticalCard(idx) ? 6 : 6
 // const getColStyle = idx => isVerticalCard(idx)
 //   ? { display: 'flex', flexDirection: 'column', height: '540px' }
 //   : { height: '260px' }
 
 onMounted(() => {
-  fetchProducts()
+  //fetchProducts()  //注释掉随机
+  fetchRecommendations();  // 改为推荐
 })
 
 
@@ -190,8 +208,8 @@ onMounted(() => {
 /* 商品卡片 */
 .random-products-grid-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 四列宫格 */
-  grid-auto-rows: 260px;                 /* 横卡高度 */
+  grid-template-columns: repeat(4, 1fr); /* 四列横卡 */
+  grid-auto-rows: 260px;
   gap: 24px;
   margin: 40px auto 0;
   max-width: 1100px;
@@ -212,8 +230,43 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-.custom-card.vertical-card {
-  grid-row: span 2; /* 竖卡占两行 */
+.custom-card-img {
+  width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  z-index: 1;
 }
+
+.custom-card-title {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  font-size: 18px;
+  text-align: center;
+  padding: 12px 0 10px 0;
+  z-index: 2;
+  font-weight: 500;
+  letter-spacing: 1px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  user-select: none;
+}
+
+.recommend-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #ff4081;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 3;
+}
+
 </style>
