@@ -196,10 +196,16 @@ export default createStore({
             : 'http://localhost:5000/api/auth/login';
     
         const response = await axios.post(url, { username, password });
+        
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        console.log('Login response:', response.data);  // 检查是否有 access_token
+        console.log('Access token:', response.data.access_token);
         localStorage.setItem('token', 
           response.data.access_token);
         localStorage.setItem('user', 
           JSON.stringify(response.data));
+        console.log('Token stored:', localStorage.getItem('token'));  // 确认存储
         commit('setUser', response.data);
       } catch (error) {
         throw new Error('登录失败');

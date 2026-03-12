@@ -88,6 +88,7 @@
 
 <script>
 import banner3 from '@/assets/banner3.png'
+
 export default {
   data() {
     return {
@@ -143,8 +144,9 @@ export default {
       }
     });
     const data = await res.json();
-    this.categories = data;
+    this.categories = Array.isArray(data) ? data : [];  // 确保是数组
   }catch (e){
+    console.error('加载分类失败', e);
     this.categories = [];
   }
 },

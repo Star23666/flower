@@ -7,13 +7,13 @@
       </div>
       <div class="carousel-inner">
         <div class="carousel-item active">
-          <img :src="images[0]" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner1">
+          <img :src="images[0]" class="d-block w-100" style="height:400px;object-fit:contain;" alt="banner1">
         </div>
         <div class="carousel-item">
-          <img :src="images[1]" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner2">
+          <img :src="images[1]" class="d-block w-100" style="height:400px;object-fit:contain;" alt="banner2">
         </div>
         <div class="carousel-item">
-          <img :src="images[2]" class="d-block w-100" style="height:400px;object-fit:cover;" alt="banner3">
+          <img :src="images[2]" class="d-block w-100" style="height:400px;object-fit:contain;" alt="banner3">
         </div>
       </div>
       <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
@@ -27,9 +27,9 @@
   
   <script setup>
   
-  import banner1 from '@/assets/banner3.png'
-  import banner2 from '@/assets/banner3.png'
-  import banner3 from '@/assets/banner3.png'
+  import banner1 from '@/assets/carousel.jpg'
+  import banner2 from '@/assets/carousel2.jpg'
+  import banner3 from '@/assets/carousel3.png'
   
   const images = [banner1, banner2, banner3]
   </script>

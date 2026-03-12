@@ -86,6 +86,7 @@ const error = ref('')
 const loginForm = ref(null)
 
 const login = async () => {
+  console.log('Login function called');
   error.value = ''
   loading.value = true
   try {
@@ -94,14 +95,17 @@ const login = async () => {
         return
       }
     })
+    console.log('Before dispatch login');
     await store.dispatch('login', {
       username: form.username,
       password: form.password,
       type: 'user'
     })
+    console.log('After dispatch login');
     router.push('/home')
   } catch (e) {
     error.value = '用户名或密码错误'
+    console.error('Login error:', e);
   } finally {
     loading.value = false
   }

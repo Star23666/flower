@@ -2,7 +2,7 @@
 <nav class="header-bar">
   <router-link to="/" class="logo-area">
     <el-icon class="logo-icon"><Grid /></el-icon>
-    <span class="logo-text">花店商城</span>
+    <span class="logo-text">花漾生活</span>
   </router-link>
   <div class="header-actions">
   <div class="nav-links">

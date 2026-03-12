@@ -103,7 +103,7 @@ def get_recommend(user_id):
         pred_scores.append((product_id, total_score, pred.est))
     
     pred_scores.sort(key=lambda x: x[1], reverse=True)
-    top_products = pred_scores[:5]
+    top_products = pred_scores[:8]  #只取前8个推荐商品
     
     # 拼接返回结果
     recommend_list = []

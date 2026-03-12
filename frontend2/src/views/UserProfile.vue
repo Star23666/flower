@@ -381,10 +381,12 @@ async function submitEditAddress() {
 
 
 // 获取用户基本信息
+console.log('Token:', token);  // 确保 token 存在
 async function fetchUserProfile() {
   const res = await fetch('http://localhost:5000/api/user/profile', {
     headers: { Authorization: `Bearer ${token}` }
-  })
+  });
+  console.log('Response status:', res.status);  // 检查状态
   if (res.ok) {
     const data = await res.json()
     userForm.value.id = data.id // 关键：一定要赋值id

@@ -76,7 +76,7 @@ const fetchProducts = async () => {
   randomProducts.value = products.value
     .map(p => ({...p}))
     .sort(() => Math.random() - 0.5)
-    .slice(0, 4)
+    .slice(0, 6)
 }
 
 const fetchRecommendations = async () => {
@@ -84,7 +84,7 @@ const fetchRecommendations = async () => {
   try {
     const res = await axios.get(`http://localhost:5000/api/recommend/${userId}`);
     if (res.data.code === 200) {
-      recommendedProducts.value = res.data.data.slice(0, 4);  // 取前4个推荐
+      recommendedProducts.value = res.data.data.slice(0, 6);  // 取前4个推荐
     }
   } catch (error) {
     console.error('推荐加载失败', error);
@@ -208,7 +208,7 @@ onMounted(() => {
 /* 商品卡片 */
 .random-products-grid-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 四列横卡 */
+  grid-template-columns: repeat(3, 1fr); /* 改为3列 */
   grid-auto-rows: 260px;
   gap: 24px;
   margin: 40px auto 0;

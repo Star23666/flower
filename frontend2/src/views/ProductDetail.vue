@@ -33,10 +33,6 @@
               </tr>
               <tr>
                 <td class="text-secondary">鲜花花语</td>
-                <td>{{ product.flower_language || '暂无' }}</td>
-              </tr>
-              <tr>
-                <td class="text-secondary">鲜花花语</td>
                 <td>{{ product.flower_language2 || '暂无' }}</td>
               </tr>
               <tr>

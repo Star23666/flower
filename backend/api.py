@@ -55,7 +55,7 @@ def seller_login():
     user = User.query.filter_by(username=username, role='seller').first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误，或非商家账号"}), 401
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": access_token, 
         "username": user.username,
@@ -406,7 +406,7 @@ def login():
         ).first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误"}), 401
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": access_token, 
         "username": user.username, 

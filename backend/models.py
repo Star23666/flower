@@ -14,7 +14,7 @@ class User(db.Model):
     avatar = db.Column(db.String(256))
     balance = db.Column(db.Numeric(10, 2), default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    ratings = db.relationship('Rating', back_populates='user')
+    # ratings = db.relationship('Rating', back_populates='user')
     
     def set_password(self, raw_password):
         """
@@ -48,7 +48,7 @@ class Product(db.Model):
     seller_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(10), default='active')  # 'active' 上架, 'inactive' 下架
     target = db.Column(db.String(100))  # 适用对象字段，如“恋人”、“朋友”、“长辈”等
-    ratings = db.relationship('Rating', back_populates='product')
+    # ratings = db.relationship('Rating', back_populates='product')
     
     # 为 Product 模型添加 to_dict 方法
     def to_dict(self):
@@ -129,13 +129,13 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship('User', backref='comments')
 #评分系统， 扩展中
-class Rating(db.Model):
-    __tablename__ = 'ratings'
+# class Rating(db.Model):
+#     __tablename__ = 'ratings'
     
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer,db.ForeignKey('users.id'), nullable=False)
-    product_id = db.Column(db.Integer,db.ForeignKey('products.id'), nullable=False)
-    rating = db.Column(db.Integer, nullable=False)  # 评分字段，范围可以是1-5
+#     id = db.Column(db.Integer, primary_key=True)
+#     user_id = db.Column(db.Integer,db.ForeignKey('users.id'), nullable=False)
+#     product_id = db.Column(db.Integer,db.ForeignKey('products.id'), nullable=False)
+#     rating = db.Column(db.Integer, nullable=False)  # 评分字段，范围可以是1-5
 
-    user = db.relationship('User', back_populates='ratings')
-    product = db.relationship('Product', back_populates='ratings')
+#     user = db.relationship('User', back_populates='ratings')
+#     product = db.relationship('Product', back_populates='ratings')
