@@ -15,7 +15,7 @@ import FlowerCategoryManage from '@/views/seller/FlowerCategoryManage.vue';
 import UserProfile from '@/views/UserProfile.vue';
 import OrderList from '@/views/OrderList.vue';
 import MainLayout from '@/views/MainLayout.vue';
-
+import AboutUs from '@/views/AboutUs.vue';
 
 const routes = [
   {
@@ -29,6 +29,7 @@ const routes = [
   { path: '/add-product', component: AddProduct },
   { path: '/seller/login', component: SellerLogin },
   { path: '/order-list', component: OrderList },
+  { path: '/about',  component: AboutUs },
   {
     path: '/seller',
     component: SellerDashboard,
@@ -58,7 +59,12 @@ const routes = [
       { path: 'user/profile', component: UserProfile ,meta:{breadcrumb: '个人中心'}},
       { path: 'products', component: ProductListPage },
       { path: 'order-list', component: OrderList },
-      { path: 'product/:id', name: 'ProductDetail', component: () => import('@/views/ProductDetail.vue'),meta:{breadcrumb: '鲜花详情' }},
+      { path: 'product/:id', name: 'ProductDetail', 
+        component: () => import('@/views/ProductDetail.vue'),
+        meta:{breadcrumb: '鲜花详情' }},
+      { path: 'about', name: 'AboutUs', 
+        component: () => import('@/views/AboutUs.vue'), 
+        meta: { breadcrumb: '关于我们' } },
       // ...其它子页面
     ]
   }

@@ -1,115 +1,39 @@
 <template>
-<!-- 全局面包屑组件 -->
-
-<!-- <nav aria-label="breadcrumb" class="breadcrumb-bar">
-    <ol class="breadcrumb">
-      <li v-for="(item, idx) in breadcrumbs" :key="idx" class="breadcrumb-item" :class="{ active: idx === breadcrumbs.length - 1 }">
-        <template v-if="idx !== breadcrumbs.length - 1">
-          <router-link :to="item.path">{{ item.label }}</router-link>
-        </template>
-        <template v-else>
-          {{ item.label }}
-        </template>
-      </li>
-    </ol>
-  </nav> -->
-
-  <div id="app">
-    <!-- 只要不是登录页才显示导航栏 -->
-    <!--
-      一个 Bootstrap 导航栏，它在不是登录/注册/商家登录页时显示。
-      导航栏包含以下链接：
-      - 主页
-      - 商品
-      - 购物车
-      - 如果用户未登录，显示登录和注册链接
-      - 如果用户是商家，显示添加商品链接
-      - 如果用户已经登录，显示退出登录链接
-    -->
-    <nav v-if="!isLoginPage" class="navbar navbar-expand-lg navbar-light bg-light">
-      <!-- 你的导航栏内容 -->
-      <!-- <div class="container">
-        <router-link class="navbar-brand" to="/">鲜花商店</router-link>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
-            <li class="nav-item" v-if="user && user.role === 'user'" >
-              <router-link class="nav-link" to="/home">主页</router-link>
-            </li>
-            <li class="nav-item" v-if="user && user.role === 'user'">
-              <router-link class="nav-link" to="/products">商品</router-link>
-            </li>
-            <li class="nav-item" v-if="user && user.role === 'user'">
-              <router-link class="nav-link" to="/cart">购物车</router-link>
-            </li>
-            <li class="nav-item" v-if="!user">
-              <router-link class="nav-link" to="/login">登录</router-link>
-            </li> 
-            <li class="nav-item" v-if="user && user.role === 'user'" >
-              <router-link class="nav-link" to="/user/profile">个人中心</router-link>
-            </li>
-          </ul>
-        </div>
-      </div> -->
-    </nav>
+  <div id="app-container">
     <AppHeaderNav v-if="!isLoginPage" />
-    <div class="container mt-4">
-      <router-view></router-view>
+    
+    <!-- 根据是否为登录页，决定是否使用 container 限制宽度 -->
+    <div :class="contentClass">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-// import { useStore } from 'vuex'
 import { useRoute } from 'vue-router'
-import AppHeaderNav from './components/AppHeaderNav.vue'
 import { useStore } from 'vuex'
-// // 状态
-// const store = useStore()
+import AppHeaderNav from './components/AppHeaderNav.vue'
+
 const route = useRoute()
-
-// const router = useRouter()
-
-// 面包屑
-// const breadcrumbs = computed(() => {
-//   const arr = []
-//   // 判断是否在商品详情页
-//   if (route.name === 'ProductDetail') {
-//     if (route.query.from === 'favorites') {
-//       arr.push({ path: '/user/profile', label: '我的收藏' })
-//     } else {
-//       arr.push({ path: '/products', label: '商品' })
-//     }
-//     arr.push({ path: route.fullPath, label: route.meta.breadcrumb || '详情' })
-//     return arr
-//   }
-//   // 其它页面用默认 route.matched
-//   return route.matched
-//     .filter(r => r.meta && r.meta.breadcrumb)
-//     .map(r => ({
-//       path: r.path.startsWith('/') ? r.path : '/' + r.path,
-//       label: r.meta.breadcrumb
-//     }))
-// })
-
-// 用户信息
-// const user = computed(() =>
-//   store.state.user || JSON.parse(localStorage.getItem('user') || 'null')
-// )
-
-// 购物车数量
-// const cartCount = computed(() =>
-//   (store.state.cart || []).reduce((total, item) => total + item.quantity, 0)
-// )
-
-
-// 是否为登录相关页面
-const loginPages = ['/', '/login', '/register', '/seller/login']
-const isLoginPage = computed(() => loginPages.includes(route.path))
 const store = useStore()
+
+// 判断当前是否在登录/注册相关页面
+// 这些页面通常需要全屏背景，不需要顶部导航
+const isLoginPage = computed(() => {
+  const loginPaths = ['/login', '/register', '/seller/login']
+  return loginPaths.some(path => route.path.startsWith(path))
+})
+
+const contentClass = computed(() => {
+  return isLoginPage.value ? 'full-width-content' : 'main-container'
+})
+
+// 初始化用户信息
 const localUser = JSON.parse(localStorage.getItem('user') || 'null')
 if (localUser && !store.state.user) {
   store.commit('setUser', localUser)
@@ -117,14 +41,71 @@ if (localUser && !store.state.user) {
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  color: #2c3e50;
+/* 全局样式清理 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: #333;
+  /* 使用高雅的浅色花卉背景图 */
+  /* 这张图是浅粉色调的模糊背景，非常适合做全局底图 */
+  background: url('https://images.pexels.com/photos/1083822/pexels-photo-1083822.jpeg?auto=compress&cs=tinysrgb&w=1920') no-repeat center center fixed;
+  background-size: cover;
+  min-height: 100vh;
 }
-.navbar {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+#app-container {
+  min-height: 100vh;
+  /* 全局遮罩层/色调层：叠加一层淡淡的白色，让背景更柔和，不抢戏 */
+  background-color: rgba(255, 255, 255, 0.4); 
+  display: flex;
+  flex-direction: column;
 }
-.container {
+
+/* 非登录页的主容器样式 */
+.main-container {
+  width: 100%;
   max-width: 1200px;
+  margin: 30px auto 60px; /* 增加底部留白 */
+  padding: 40px;
+  /* 内容区背景：高透明度的纯白，类似于高级纸张的质感 */
+  background: rgba(255, 255, 255, 0.95); 
+  border-radius: 16px; /* 圆角 */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); /* 更柔和且深邃的投影 */
+  backdrop-filter: blur(10px); /* 磨砂玻璃效果 */
+  flex: 1; /* 撑满剩余高度 */
+  
+  /* 增加边框，提升精致感 */
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .main-container {
+    margin: 15px auto;
+    padding: 20px;
+    width: 95%; /* 移动端稍宽一点 */
+  }
+}
+
+/* 登录页全宽容器 */
+.full-width-content {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 页面切换动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px); /* 轻微的上浮效果 */
 }
 </style>

@@ -12,59 +12,63 @@
           
         </div>
         <!-- 右侧详情 -->
-        <div class="col-md-6">
-          <h2 class="mb-0">{{ product.name }}</h2>
-          <el-button 
-  :type="isFavorited ? 'danger' : 'primary'" 
-  :icon="isFavorited ? 'StarFilled' : 'Star'" 
-  @click="toggleFavorite"
-  class="favorite-btn"
->
-  {{ isFavorited ? '已收藏' : '点我收藏' }}
-</el-button>
-          <div class="mb-3 fs-4 text-danger">¥{{ product.price }}</div>
-          <table  class="table table-borderless mb-3" style="width:auto">
-            <tbody>
-              <tr>
-                <td class="text-secondary">鲜花类型</td>
-                <td>
-                {{ categories && categories.find ? (categories.find(c => c.id === product.category_id)?.name || '暂无') : '暂无' }}
-                </td>
-              </tr>
-              <tr>
-                <td class="text-secondary">鲜花花语</td>
-                <td>{{ product.flower_language2 || '暂无' }}</td>
-              </tr>
-              <tr>
-                <td class="text-secondary">鲜花产地</td>
-                <td>{{ product.origin || '暂无' }}</td>
-              </tr>
-              <tr>
-                <td class="text-secondary">适用场景</td>
-                <td>{{ product.scene || '暂无' }}</td>
-              </tr>
-              <tr>
-                <td class="text-secondary">适用对象</td>
-                <td>{{ product.target || '暂无' }}</td>
-              </tr>
-              <tr>
-                <td class="text-secondary">点击次数</td>
-                <td>{{ product.click_count || 0 }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <!-- 操作区 -->
-          <div class="d-flex align-items-center mb-3">
-            <input
-              type="number"
-              min="1"
-              :max="product.stock"
-              class="form-control mx-2"
-              style="width: 80px; text-align: center;"
-              v-model.number="quantity"
-            >
-            <button class="btn btn-success me-2" @click="addToCart">加入到购物车</button>
-            <button class="btn btn-warning">立即购买</button>
+        <!-- 右侧详情 -->
+        <div class="col-md-6 product-info-col">
+          <div class="info-header">
+            <h2 class="product-title">{{ product.name }}</h2>
+            <el-button 
+              :type="isFavorited ? 'danger' : 'default'" 
+              :icon="isFavorited ? 'StarFilled' : 'Star'" 
+              circle
+              size="large"
+              class="fav-btn"
+              @click="toggleFavorite"
+              :title="isFavorited ? '取消收藏' : '收藏商品'"
+            ></el-button>
+          </div>
+          
+          <div class="price-tag">
+            <span class="currency">¥</span>
+            <span class="amount">{{ product.price }}</span>
+          </div>
+
+          <!-- 新的美化参数区域 -->
+          <div class="specs-box">
+            <div class="spec-item">
+              <span class="label">鲜花类型</span>
+              <span class="value">
+                <el-tag effect="light" type="danger" round size="small">
+                   {{ getCategoryName(product.category_id) }}
+                </el-tag>
+              </span>
+            </div>
+            <div class="spec-item">
+              <span class="label">适用对象</span>
+              <span class="value">{{ product.target || '通用' }}</span>
+            </div>
+            <!-- <div class="spec-item full-width">
+              <span class="label">鲜花花语</span>
+              <span class="value text-highlight">{{ product.flower_language2 || '暂无花语' }}</span>
+            </div> -->
+            <div class="spec-item">
+              <span class="label">适用场景</span>
+              <span class="value">{{ product.scene || '通用' }}</span>
+            </div>
+            <!-- <div class="spec-item">
+              <span class="label">原产地</span>
+              <span class="value">{{ product.origin || '未知' }}</span>
+            </div> -->
+          </div>
+
+          <!-- 操作区 (保持原有功能，美化样式) -->
+          <div class="action-area">
+            <el-input-number v-model="quantity" :min="1" :max="product.stock" class="qty-input" />
+            <el-button type="primary" size="large" class="action-btn cart-btn" @click="addToCart" round>
+              加入购物车
+            </el-button>
+            <el-button type="warning" size="large" class="action-btn buy-btn" @click="handleBuyNow" round>
+              立即购买
+            </el-button>
           </div>
         </div>
       </div>
@@ -125,250 +129,279 @@
   </template>
   
 <script setup>
-  import dayjs from 'dayjs'
-  import utc from 'dayjs/plugin/utc'
-  import timezone from 'dayjs/plugin/timezone'
+  /* eslint-disable no-unused-vars */
+import { ref, onMounted, computed, watch } from 'vue'
+import { useStore } from 'vuex'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
 
 
-  
-  import { ref, onMounted, computed } from 'vue'
-  import { ElMessage } from 'element-plus'
-  import { useStore } from 'vuex'
-  import { useRoute } from 'vue-router'
-  import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
-  
-  dayjs.extend(utc)
-  dayjs.extend(timezone)
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
-  const store = useStore()
-  const route = useRoute()
+const store = useStore()
+const route = useRoute()
+const router = useRouter()
+
+const product = ref({})
+const categories = ref([])
+const quantity = ref(1)
+
+// 状态标识
+const isFavorited = ref(false)
+const isLiked = ref(false)
+const likeCount = ref(0)
+
+// 评论相关
+const comments = ref([])
+const newComment = ref('')
+
+// --- 核心数据获取 ---
+
+// 初始化加载
+onMounted(async () => {
+  const id = route.params.id
+  if(id) {
+    await fetchCategories()
+    await fetchProduct(id)
+    fetchComments(id)
+    
+    // 如果用户已登录，获取个性化状态
+    if (store.state.user || localStorage.getItem('token')) {
+      checkFavoriteStatus(id)
+      checkLikeStatus(id)
+    }
+  }
+})
+
+// 监听路由变化（防止同一组件内跳转不刷新）
+watch(() => route.params.id, (newId) => {
+  if(newId) {
+    product.value = {}
+    fetchProduct(newId)
+    // ...重新获取其他状态
+  }
+})
+
+const fetchProduct = async (id) => {
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${id}`)
+    if(res.ok){
+      product.value = await res.json()
+      // 如果后端有点赞数，初始化它
+      if(product.value.like_count) likeCount.value = product.value.like_count
+    }
+  } catch(e) { console.error(e) }
+}
+
+const fetchCategories = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/api/categories')
+    if(res.ok) categories.value = await res.json()
+  } catch(e) { console.error(e) }
+}
+
+const fetchComments = async (pid) => {
+  try {
+    const id = pid || product.value.id
+    const res = await fetch(`http://localhost:5000/api/products/${id}/comments`)
+    if(res.ok) comments.value = await res.json()
+  } catch(e) { console.error(e) }
+}
+
+// --- 交互逻辑 ---
+
+const getCategoryName = (cid) => {
+  // 1. 如果分类数据还没取回来，显示加载中
+  if (!categories.value || categories.value.length === 0) return '加载中...'
   
-  const product = ref({})
-  const quantity = ref(1)
-  const categories = ref([])
-  const isFavorited = ref(false)
+  // 2. 如果商品详情里没有 valid 的 category_id
+  if (!cid) return '暂无'
+
+  // 3. 核心修复：使用 String() 强制转换两边为字符串再比较，避免 1 !== "1" 的问题
+  const cat = categories.value.find(c => String(c.id) === String(cid))
   
-  // 点赞
-  const likeCount = ref(product.value.like_count || 0)
-  const isLiked = ref(false) // 可根据用户是否已点赞初始化
-  const user = computed(() =>
-  store.state.user || JSON.parse(localStorage.getItem('user') || 'null')
-)
-  const likeProduct = async () => {
-  if (!user.value) {
-    ElMessage.warning('请先登录')
+  return cat ? cat.name : '暂无'
+}
+
+const getProductImage = (p) => {
+  if (!p || !p.image_url) return 'https://via.placeholder.com/400x400?text=No+Image'
+  if (p.image_url.startsWith('http')) return p.image_url
+  return `http://localhost:5000${p.image_url}`
+}
+
+// 加入购物车
+const addToCart = () => {
+  if (!checkLogin()) return
+  if (quantity.value > product.value.stock) {
+    ElMessage.warning('库存不足')
     return
   }
+  store.commit('addToCart', { ...product.value, quantity: quantity.value })
+  ElMessage.success({
+    message: '成功加入购物车',
+    type: 'success',
+  })
+}
+
+// 立即购买
+const handleBuyNow = () => {
+  if (!checkLogin()) return
+  // 直接加入购物车并跳转到结算页
+  addToCart()
+  router.push('/cart')
+}
+
+// --- 收藏逻辑 ---
+const checkFavoriteStatus = async (pid) => {
+  const token = localStorage.getItem('token')
+  if(!token) return
   try {
-    const token = localStorage.getItem('token')
-    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/like`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const res = await fetch(`http://localhost:5000/api/favorites/check?product_id=${pid}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     })
-    if (res.ok) {
-      
+    if(res.ok) {
       const data = await res.json()
-      likeCount.value = data.like_count // 用后端返回的点赞数
-      isLiked.value = true
-      ElMessage.success('点赞成功！')
-    } else {
-      const err = await res.json()
-      ElMessage.error(err.message || '点赞失败')
+      isFavorited.value = data.is_favorited
     }
-  } catch (e) {
-    ElMessage.error('点赞失败')
+  } catch(e) { console.error(e) }
+}
+
+const toggleFavorite = async () => {
+  if (!checkLogin()) return
+  const token = localStorage.getItem('token')
+  
+  try {
+    const method = isFavorited.value ? 'DELETE' : 'POST'
+    const url = isFavorited.value 
+      ? `http://localhost:5000/api/favorites/${product.value.id}` 
+      : 'http://localhost:5000/api/favorites'
+      
+    const body = !isFavorited.value ? JSON.stringify({ product_id: product.value.id }) : null
+    
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body
+    })
+
+    if(res.ok) {
+      isFavorited.value = !isFavorited.value
+      ElMessage.success(isFavorited.value ? '已收藏' : '已取消收藏')
+    } else {
+      ElMessage.error('操作失败')
+    }
+  } catch(e) {
+    ElMessage.error('网络错误')
   }
 }
 
-
-  // const from = route.query.from
-
-
-  // 面包屑
-  // const breadcrumbs = computed(() => {
-  //   const arr = []
-  //   if (from === 'favorites') {
-  //     arr.push({ path: '/user/profile', label: '我的收藏' })
-  //   } else {
-  //     arr.push({ path: '/products', label: '商品' })
-  //   }
-  //   arr.push({ path: route.fullPath, label: product.value?.name || '详情' })
-  //   return arr
-  // })
-  // 获取分类
-
-  // 评论区
-  const comments = ref([
-  // 示例数据
-  // { id: 1, username: '小明', content: '很漂亮的花！', created_at: '2025-08-01 16:00' }
-])
-  const newComment = ref('')
-
-  const submitComment = async () => {
-    if (!newComment.value.trim()) return
-    const token = localStorage.getItem('token')
-    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/comments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ content: newComment.value })
-  })
-    if (res.ok) {
-      console.log(comments.value)
-      console.log('评论接口状态', res.status)
+// --- 点赞逻辑 ---
+const checkLikeStatus = async (pid) => {
+  const token = localStorage.getItem('token')
+  // 如果后端有点赞状态查询接口
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${pid}/like/status`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
+    if(res.ok) {
       const data = await res.json()
-      console.log('评论接口响应', data)
-      ElMessage.success(data.message)
+      // 如果后端返回当前用户是否已点赞的字段（例如 liked: true/false）
+      if (data.liked !== undefined) {
+        isLiked.value = data.liked
+      }
+      likeCount.value = data.like_count
+    }
+  } catch(e) {
+    console.error(e)
+  }
+}
+
+const likeProduct = async () => {
+  if (!checkLogin()) return
+  if (isLiked.value) {
+    ElMessage.info('您已经赞过该商品了')
+    return 
+  }
+  
+  const token = localStorage.getItem('token')
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/like`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    
+    const data = await res.json()
+    
+    if(res.ok) {
+      likeCount.value = data.like_count
+      isLiked.value = true
+      ElMessage.success('感谢您的点赞！')
+    } else {
+      // 捕获后端返回的具体错误信息
+      // 假设后端返回 { message: "You have already liked this product" }
+      if (res.status === 400 && (data.message.includes('already') || data.message.includes('已点赞'))) {
+        isLiked.value = true // 同步状态
+        ElMessage.warning('您已经点过赞了')
+      } else {
+        ElMessage.error(data.message || '点赞失败')
+      }
+    }
+  } catch(e) {
+    ElMessage.error('网络错误，点赞失败')
+  }
+}
+
+// --- 评论逻辑 ---
+const submitComment = async () => {
+  if (!checkLogin()) return
+  if (!newComment.value.trim()) return
+
+  const token = localStorage.getItem('token')
+  try {
+    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ content: newComment.value })
+    })
+    if(res.ok) {
+      ElMessage.success('评论发布成功')
       newComment.value = ''
-      fetchComments() // 重新加载评论
+      fetchComments()
     } else {
       const err = await res.json()
       ElMessage.error(err.message || '评论失败')
     }
-  }
+  } catch(e) { ElMessage.error('网络错误') }
+}
 
+// 工具函数
+const checkLogin = () => {
+  const token = localStorage.getItem('token')
+  if(!token) {
+    ElMessage.warning('请先登录后再操作')
+    router.push('/login')
+    return false
+  }
+  return true
+}
 
+const formatTime = (timeStr) => {
+  return dayjs.utc(timeStr).tz('Asia/Shanghai').format('YYYY-MM-DD HH:mm')
+}
 
-  const fetchCategories = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:5000/api/categories', {
-        headers: {
-          'Authorization': 'Bearer ' + token
-        }
-      })
-      categories.value = await res.json()
-    } catch (e) {
-      categories.value = []
-    }
-  }
-  
-  // 获取商品详情
-  const fetchProduct = async (id) => {
-    const res = await fetch(`http://localhost:5000/api/products/${id}`)
-    product.value = await res.json()
-  }
-  
-  // 切换收藏状态
-  const toggleFavorite = async () => {
-    const token = localStorage.getItem('token')
-    if (!token){
-      ElMessage.warning('请先登录')
-      return
-    }
-
-    try {
-      const method = isFavorited.value ? 'DELETE' : 'POST'
-      const url = isFavorited.value 
-      ? `http://localhost:5000/api/favorites/${product.value.id}`
-      : 'http://localhost:5000/api/favorites'
-      
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: !isFavorited.value ? JSON.stringify({ product_id: product.value.id }) : null
-      })
-      
-      if (res.ok) {
-        isFavorited.value = !isFavorited.value
-        ElMessage.success(isFavorited.value ? '已添加到收藏夹' : '已取消收藏')
-      }else{
-        const error = await res.json()
-        ElMessage.error(error.messagege || '操作失败，请重试') 
-      }
-    } catch (error) {
-      console.error('操作失败:', error)
-      ElMessage.error('操作失败，请重试')
-    }
-  }
-  
-  // 获取商品图片
-  const getProductImage = (product) => {
-    if (!product || !product.image_url) {
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZWVlZWVlIi8+CiAgPHRleHQgeD0iNTAlIiB5PSI1JSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5OTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'
-    }
-    if (product.image_url.startsWith('http')) return product.image_url
-    return `http://localhost:5000${product.image_url}`
-  }
-  
-  // 增加数量
-  // const increaseQty = () => {
-  //   quantity.value++
-  // }
-  
-  // // 减少数量
-  // const decreaseQty = () => {
-  //   if (quantity.value > 1) quantity.value--
-  // }
-  
-  // 添加到购物车
-  const addToCart = () => {
-    if (quantity.value < 1) quantity.value = 1
-    if (quantity.value > product.value.stock) {
-      quantity.value = product.value.stock
-      ElMessage.warning('库存不足')
-      return
-    }
-    
-    store.commit('addToCart', { ...product.value, quantity: quantity.value })
-    ElMessage.success('已加入购物车')
-  }
-  
-  // 检查是否已收藏
-  const checkFavoriteStatus = async () => {
-    const token = localStorage.getItem('token')
-    if(!token) return
-    
-    try {
-      const res = await fetch(`http://localhost:5000/api/favorites/check?product_id=${product.value.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        isFavorited.value = data.is_favorited
-      }
-    } catch (error) {
-      console.error('检查收藏状态失败:', error)
-    }
-  }
-  // 获取评论区
-
-  const fetchComments = async () => {
-    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/comments`)
-    if (res.ok) {
-      comments.value = await res.json()
-    }
-  }
-
-  // 组件挂载时获取数据
-  onMounted(async () => {
-    const id = route.params.id
-    console.log('组件挂载时的登录状态:',store.state.isLoggedIn)
-    await fetchProduct(id)
-    await fetchCategories()
-    await checkFavoriteStatus()
-    fetchComments()
-
-    // 获取点赞状态
-    const token = localStorage.getItem('token')
-    const res = await fetch(`http://localhost:5000/api/products/${product.value.id}/like/status`, {
-    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-    if (res.ok) {
-    const data = await res.json()
-    likeCount.value = data.like_count
-    isLiked.value = data.liked
-    }
-  })
+// 简单的根据用户名生成颜色
+const getRandomColor = (name) => {
+  if(!name) return '#ccc'
+  const colors = ['#ff758c', '#ff7eb3', '#8ec5fc', '#e0c3fc', '#fbc2eb', '#a18cd1']
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return colors[Math.abs(hash) % colors.length]
+}
   </script>
 
 <style scoped>
@@ -519,5 +552,122 @@
   margin-left: 48px;
   font-size: 12px;
   color: #aaa;
+}
+/* --- 产品详情布局美化 --- */
+.product-info-col {
+  padding-left: 2rem;
+}
+
+.info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.product-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.price-tag {
+  color: #ff758c;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: baseline;
+}
+
+.price-tag .currency {
+  font-size: 1.5rem;
+  margin-right: 4px;
+}
+
+.price-tag .amount {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+/* 参数网格样式 (替代表格) */
+.specs-box {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 两列布局 */
+  gap: 20px 24px;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 让花语占满一整行，因为通常字数较多 */
+.spec-item.full-width {
+  grid-column: span 2; 
+  background: rgba(255, 240, 245, 0.5); /* 淡淡的粉色背景强调花语 */
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.spec-item .label {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.spec-item .value {
+  font-size: 15px;
+  color: #444;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.text-highlight {
+  color: #555;
+  font-style: italic;
+}
+
+/* 操作按钮区 */
+.action-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 2rem;
+}
+
+.qty-input {
+  width: 120px;
+}
+
+.action-btn {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: bold;
+  transition: transform 0.2s;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.cart-btn {
+  background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+  border: none;
+}
+
+.buy-btn {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+  border: none;
+  color: #fff;
 }
 </style>

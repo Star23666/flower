@@ -452,7 +452,6 @@ def get_product_detail(product_id):
 
 
 @api_bp.route('/api/categories', methods=['GET'])
-@jwt_required()
 def get_categories():
     categories = Category.query.all()
     return jsonify([{
