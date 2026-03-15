@@ -67,6 +67,10 @@ def seller_login():
     user = User.query.filter_by(username=username, role='seller').first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"message": "用户名或密码错误，或非商家账号"}), 401
+    
+    
+    
+    
     access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": access_token, 
@@ -416,8 +420,24 @@ def login():
         username=username,
         role='user',
         ).first()
-    if not user or not check_password_hash(user.password, password):
+
+    if not user:
         return jsonify({"message": "用户名或密码错误"}), 401
+    
+    # === 核心修复开始：兼容明文密码自动升级 ===
+    if check_password_hash(user.password, password):
+        # 1. 正常的哈希验证通过
+        pass
+    elif user.password == password:
+        # 2. 哈希验证失败，但明文密码匹配（说明是旧数据）
+        # 验证通过，并立即自动升级为哈希加密存储
+        user.password = generate_password_hash(password)
+        db.session.commit()
+    else:
+        # 3. 都不匹配
+        return jsonify({"message": "用户名或密码错误"}), 401
+    # === 核心修复结束 ===
+
     access_token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": access_token, 
@@ -568,6 +588,12 @@ def update_user(user_id):
     user.avatar = data.get('avatar', user.avatar)
     user.password = data.get('password', user.password)
     user.balance = data.get('balance',user.balance)
+    
+    # 关键修改：如果传了 password，要进行 hash 加密
+    new_password = data.get('password')
+    if new_password:
+        user.password = generate_password_hash(new_password)
+    
     db.session.commit()
     return jsonify({"message": "用户信息已更新"}), 200
 
