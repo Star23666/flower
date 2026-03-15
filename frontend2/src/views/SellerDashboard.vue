@@ -5,6 +5,7 @@
       <div class="logo-area">
         <h1>Flower MS</h1>
       </div>
+      <!-- 引用独立的侧边栏组件 -->
       <SellerSidebar />
     </aside>
 
@@ -13,13 +14,16 @@
       <!-- 顶部个人信息栏 -->
       <header class="dashboard-header">
         <div class="breadcrumb">
-           <!-- 这里可以放面包屑，或者简单的问候语 -->
-           <span>Good day, 商家管理员</span>
+           <!-- 面包屑导航 -->
+           <el-breadcrumb separator="/">
+              <el-breadcrumb-item>商家后台</el-breadcrumb-item>
+              <el-breadcrumb-item>{{ currentRouteName }}</el-breadcrumb-item>
+           </el-breadcrumb>
         </div>
         <div class="user-action">
            <el-dropdown>
             <span class="el-dropdown-link user-profile">
-              <el-avatar :size="32" icon="UserFilled" class="avatar" />
+              <el-avatar :size="32" :icon="UserFilled" class="avatar" />
               <span class="username">{{ sellerName }}</span>
               <el-icon class="el-icon--right"><arrow-down /></el-icon>
             </span>
@@ -34,10 +38,9 @@
       
       <!-- 内容展示区 (滚动) -->
       <main class="content-scroll-area">
-        <router-view v-slot="{ Component }">
-          <transition name="fade-transform" mode="out-in">
-             <component :is="Component" />
-          </transition>
+        <!-- 移除 transition，增加 :key，解决白页问题 -->
+        <router-view v-slot="{ Component, route }">
+          <component :is="Component" :key="route.path" v-if="Component" />
         </router-view>
       </main>
     </div>
@@ -47,15 +50,30 @@
 <script setup>
 import { computed } from 'vue'
 import { useStore } from 'vuex'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import SellerSidebar from '@/components/SellerSidebar.vue'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { ArrowDown, UserFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 const store = useStore()
 const router = useRouter()
+const route = useRoute()
 
 const sellerName = computed(() => store.state.user?.username || 'Seller')
+
+// 获取当前路由名称，用于显示面包屑
+const currentRouteName = computed(() => {
+  const map = {
+    '/seller/products': '商品管理',
+    '/seller/orders': '订单管理',
+    '/seller/users': '用户管理',
+    '/seller/profile': '商家信息',
+    '/seller/flower-categories': '花材分类'
+  }
+  // 简单匹配，如果路径以 key 开头
+  const key = Object.keys(map).find(k => route.path.startsWith(k))
+  return map[key] || '管理面板'
+})
 
 const logout = () => {
   store.commit('logout')
@@ -68,10 +86,10 @@ const logout = () => {
 .dashboard-layout {
   display: flex;
   height: 100vh;
-  min-height: 100vh; /* 兜底 */
+  min-height: 100vh;
   width: 100vw;
   background-color: #f3f4f6;
-  overflow: hidden; /* 防止双滚动条 */
+  overflow: hidden; 
 }
 
 /* 侧边栏容器 */
@@ -83,6 +101,7 @@ const logout = () => {
   flex-direction: column;
   flex-shrink: 0;
   z-index: 10;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.02);
 }
 
 .logo-area {
@@ -106,7 +125,7 @@ const logout = () => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* 防止子元素撑开flex */
+  min-width: 0; 
 }
 
 /* 顶部Header */
@@ -118,58 +137,26 @@ const logout = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  z-index: 5;
-}
-
-.breadcrumb {
-  font-size: 14px;
-  color: #6b7280;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 }
 
 .user-profile {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
+  color: #4b5563;
 }
-.user-profile:hover {
-  background: #f3f4f6;
-}
-.user-profile .avatar {
-  background: #e0e7ff;
-  color: #4f46e5;
-  margin-right: 8px;
-}
-.user-profile .username {
-  font-size: 14px;
+.username {
+  margin: 0 8px;
   font-weight: 500;
-  color: #374151;
 }
 
-/* 内容滚动区 */
+/* 内容区域 */
 .content-scroll-area {
   flex: 1;
-  overflow-y: auto; /* 只有这里滚动 */
-  padding: 24px 32px;
-  background: #f9fafb;
-}
-
-/* 路由转场动画 */
-.fade-transform-leave-active,
-.fade-transform-enter-active {
-  transition: all 0.3s;
-}
-
-.fade-transform-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.fade-transform-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px; 
 }
 </style>

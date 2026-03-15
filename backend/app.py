@@ -7,9 +7,6 @@ import os
 from dotenv import load_dotenv
 from flask import send_from_directory
 from api import api_bp # 导入 api.py 以注册路由
-
-
-# 添加推荐蓝图导入
 from recommend_api import recommend_bp
 
 # from flask_sqlalchemy import SQLAlchemy
