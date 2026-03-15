@@ -4,7 +4,7 @@ import router from './router/index';
 import store from './store/index';
 import 'element-plus/dist/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+// import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import ElementPlus from 'element-plus'
 // Element Plus 的图标
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'

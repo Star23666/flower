@@ -22,14 +22,21 @@ import AppHeaderNav from './components/AppHeaderNav.vue'
 const route = useRoute()
 const store = useStore()
 
-// 判断当前是否在登录/注册相关页面
-// 这些页面通常需要全屏背景，不需要顶部导航
+// 判断当前是否在 登录/注册 或 商家后台 等特殊页面
+// 这些页面通常有自己的布局，不需要顶部用户导航
 const isLoginPage = computed(() => {
-  const loginPaths = ['/login', '/register', '/seller/login']
-  return loginPaths.some(path => route.path.startsWith(path))
+  // 定义需要隐藏顶部导航的路径前缀
+  const hiddenPaths = [
+    '/login', 
+    '/register', 
+    '/seller',  // 新增：只要是 /seller 开头的路径（包括登录、后台），都隐藏顶部导航
+  ]
+  return hiddenPaths.some(path => route.path.startsWith(path))
 })
 
 const contentClass = computed(() => {
+  // 如果是隐藏导航的页面（如登录、商家后台），使用全宽容器
+  // 如果是普通页面，使用 main-container
   return isLoginPage.value ? 'full-width-content' : 'main-container'
 })
 
@@ -54,12 +61,18 @@ body {
   min-height: 100vh;
 }
 
+/* 确保 flex: 1 生效 */
 #app-container {
   min-height: 100vh;
-  /* 全局遮罩层/色调层：叠加一层淡淡的白色，让背景更柔和，不抢戏 */
-  background-color: rgba(255, 255, 255, 0.4); 
   display: flex;
   flex-direction: column;
+}
+
+.full-width-content {
+  width: 100%;
+  flex: 1; /* 占据剩余空间 */
+  display: flex;           /* 关键：让子元素（SellerDashboard）能撑开 */
+  flex-direction: column;  /* 关键 */
 }
 
 /* 非登录页的主容器样式 */

@@ -142,10 +142,14 @@ const cartCount = computed(() => {
 // 下拉菜单逻辑
 const handleCommand = (command) => {
   if (command === 'logout') {
-    store.commit('logout') // 确保 store 有 logout mutation，或者手动清除
-    localStorage.removeItem('user')
-    user.value = null
+    // 调用 store 的 logout 方法，一次性清除所有状态
+    store.commit('logout') 
+    
+    // 强制跳转到登录页
     router.push('/login')
+    
+    // 可选：刷新页面以确保彻底重置（解决某些极端缓存情况）
+    setTimeout(() => location.reload(), 100) 
   } else if (command === 'profile') {
     router.push('/user/profile')
   } else if (command === 'orders') {

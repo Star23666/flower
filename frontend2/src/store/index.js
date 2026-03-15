@@ -12,6 +12,16 @@ export default createStore({
     cart: JSON.parse(localStorage.getItem('cart') || '[]'),
   },
   mutations: {
+    logout(state) {
+      state.user = null;
+      state.cart = [];
+      state.sellerProducts = [];
+      state.orders = [];
+      // 清除本地存储的所有相关信息
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('cart');
+    },
     setUser(state, user) {
       state.user = user;
     },
@@ -188,27 +198,55 @@ export default createStore({
     },
     
     async login({ commit }, { username, password, type = 'user' }) {
+      // 1. 确定 URL
+      // 注意：这里 type 判断要小心，确保前端传过来的 type 真的是 'seller'
+      const url =
+        type === 'seller'
+          ? 'http://localhost:5000/api/seller/login'
+          : 'http://localhost:5000/api/auth/login';
+
       try {
-        // 根据 type 选择接口1
-        const url =
-          type === 'seller'
-            ? 'http://localhost:5000/api/seller/login'
-            : 'http://localhost:5000/api/auth/login';
-    
+        console.log(`[Store] 开始登录... URL: ${url}, 用户: ${username}, 类型: ${type}`);
+        
+        // 2. 发送请求
         const response = await axios.post(url, { username, password });
         
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        console.log('Login response:', response.data);  // 检查是否有 access_token
-        console.log('Access token:', response.data.access_token);
-        localStorage.setItem('token', 
-          response.data.access_token);
-        localStorage.setItem('user', 
-          JSON.stringify(response.data));
-        console.log('Token stored:', localStorage.getItem('token'));  // 确认存储
-        commit('setUser', response.data);
+        // 3. 打印响应结果，方便调试
+        console.log('[Store] 登录响应成功:', response);
+
+        const data = response.data;
+        
+        // 4. 校验 Token 是否存在
+        if (!data || !data.access_token) {
+           throw new Error('服务器未返回 Token');
+        }
+
+        // 5. 存储
+        localStorage.setItem('token', data.access_token);
+        localStorage.setItem('user', JSON.stringify(data));
+        
+        // 6. 更新状态
+        commit('setUser', data);
+        
+        console.log('[Store] 登录流程完成，Token 已存储');
+        return data; 
       } catch (error) {
-        throw new Error('登录失败');
+        // 7. 详细的错误捕获
+        console.error('[Store] 登录发生异常:', error);
+        
+        if (error.response) {
+            // 服务器返回了非 2xx 状态码 (比如 401 密码错误)
+            console.error('状态码:', error.response.status);
+            console.error('错误数据:', error.response.data);
+            const msg = error.response.data.message || '用户名或密码错误';
+            throw new Error(msg); 
+        } else if (error.request) {
+            // 请求已发出但无响应 (可能是 CORS 失败导致 OPTIONS 过了但 POST 没回)
+            throw new Error('服务器无响应，请检查网络或后端服务');
+        } else {
+            // 其他 JS 错误
+            throw new Error(error.message);
+        }
       }
     },
     async register(_, credentials) {

@@ -125,14 +125,25 @@ const handleLogin = async () => {
       loading.value = true
       errorMsg.value = ''
       try {
+        console.log('[Component] 准备调用 store.dispatch login...'); // 1. 开始
         await store.dispatch('login', {
           username: form.username,
           password: form.password,
           type: 'user'
         })
-        router.push('/')
+        console.log('[Component] Store login 成功返回，准备跳转...'); // 2. 中间
+
+        // 尝试跳转
+        const redirect = router.currentRoute.value.query.redirect || '/';
+        console.log('[Component] 跳转目标:', redirect); // 3. 打印目标路径
+        
+        // 关键点：用 replace 代替 push 试试，防止堆栈问题
+        await router.replace(redirect); 
+        
+        console.log('[Component] 跳转指令已发出'); // 4. 结束
       } catch (e) {
-        errorMsg.value = '用户名或密码错误，请重试'
+        console.error('[Component] 捕获到错误:', e);
+        errorMsg.value = e.message || '用户名或密码错误';
       } finally {
         loading.value = false
       }
