@@ -176,23 +176,23 @@ const newsList = ref([
 const displayProducts = computed(() => {
   let list = []
   
+  // 1. 直拿推荐商品
   if (recommendedProducts.value.length > 0) {
-    // 场景A：有真实推荐数据 -> 显示红框，乱序
     list = recommendedProducts.value.map(p => ({ 
       ...p, 
-      id: p.product_id,
-      is_recommended: true 
-    }))
-  } else {
-    // 场景B：降级显示普通商品
-    // 【修改点】：去掉 (p, index) 中的 index，改为只用 p
-    list = products.value.map(p => ({ 
-      ...p, 
-      is_recommended: false 
+      id: p.product_id,   // 确保映射 product_id 为 id
+      is_recommended: true // 这些都是推荐商品，显示金边和推荐标
     }))
   }
+
+  // (删除了原先的“自动补位”逻辑)
   
-  return list.slice(0, 6)
+  // 2. 截取前9个，并添加辅助显示的属性
+  return list.slice(0, 9).map(item => ({
+    ...item,
+    salesCount: getFakeSales(item.id), 
+    displayPrice: parseFloat(item.price || 0).toFixed(2) 
+  }))
 })
 
 // 随机分配图片和ID给News
@@ -270,6 +270,13 @@ const handleNewsClick = (news) => {
 const getImageUrl = (url) => {
   if (!url) return 'https://placeholder.pics/svg/320x180/E0E0E0/888888/Flower+News'
   return url.startsWith('http') ? url : `http://localhost:5000${url}`
+}
+
+/* === 在这里插入缺失的 getFakeSales 函数 === */
+const getFakeSales = (id) => {
+  if (!id) return 100 // 默认值，防止 id 为空出错
+  // 算法：(ID * 质数) 取余 + 基础销量，保证对于同一个 ID 生成的数字是固定的
+  return Math.floor((id * 167) % 800 + 120)
 }
 
 onMounted(async () => {
@@ -457,11 +464,11 @@ onMounted(async () => {
 }
 .news-item {
   display: flex; 
-  align-items: center; /* 垂直居中 */
-  background: #fff;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  align-items: flex-start; /* 改成顶部对齐 */
+  justify-content: space-between;
+  background: transparent;
+  padding: 50px 0; /*稍微紧凑一点点的垂直间距*/
+  border-bottom: 1px solid #eaeaea;
   transition: all 0.3s ease;
   min-height: 220px;
 }
@@ -474,8 +481,9 @@ onMounted(async () => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 0 40px; /* 增加左右内边距，让文字不贴边 */
+  justify-content: flex-start; /* 内容也顶部对齐 */
+  padding-right: 60px; /* 间距稍微调小一点，留给文字更多空间 */
+  padding-left: 0;
 }
 .news-title {
   font-size: 22px; 
@@ -485,11 +493,14 @@ onMounted(async () => {
   line-height: 1.4;
 }
 .news-desc {
-  font-size: 15px; 
-  color: #666; 
+  font-size: 15px; /* 稍微调小1px让长文看起来更精致 */
+  color: #555; 
   line-height: 1.8; 
-  margin-bottom: 20px;
-  white-space: normal; /* 确保换行 */
+  margin-bottom: 24px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word; /* 兼容性写法 */
+  text-align: justify;    /* 两端对齐，看起来像报刊 */
 }
 .news-date {
   font-size: 13px; 

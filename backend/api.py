@@ -37,13 +37,25 @@ def upload_image():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        os.makedirs(upload_folder, exist_ok=True)  # 注意这里
-        file_path = os.path.join(upload_folder, filename)
+        # === 核心修改开始 ===
+        # 1. 获取文件后缀
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        
+        # 2. 生成唯一文件名：时间戳_随机数.后缀
+        # 这样即使原名一样，存到服务器上也是不同的文件，不会互相覆盖
+        unique_filename = f"{int(time.time() * 1000)}_{random.randint(1000, 9999)}.{ext}"
+        
+        # 3. 确保目录存在
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # 4. 保存文件
+        file_path = os.path.join(upload_folder, unique_filename)
         file.save(file_path)
-        # 返回带子目录的静态路径
-        url = f'/static/uploads/{sub_folder}/{filename}'
+        
+        # 5. 返回新路径
+        url = f'/static/uploads/{sub_folder}/{unique_filename}'
         return jsonify({'url': url})
+        # === 核心修改结束 ===
     return jsonify({'error': 'Invalid file type'}), 400
 
 

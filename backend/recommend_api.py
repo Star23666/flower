@@ -106,9 +106,12 @@ def get_recommend(user_id):
         user_interacted = behavior_df[behavior_df["user_id"] == user_id]["product_id"].unique()
     
     # 2. 找出未交互的商品作为候选集
-    # (如果是新用户，interacted 为空，则所有商品都是候选)
     all_pids = products_df["product_id"].tolist()
     candidate_pids = [p for p in all_pids if p not in user_interacted]
+    
+    # 【建议加上这句保险】如果候选不足12个，就回退到使用所有商品
+    if len(candidate_pids) < 12:
+        candidate_pids = all_pids
     
     # 如果都交互过了，就从所有的里面推
     if not candidate_pids:
@@ -135,7 +138,7 @@ def get_recommend(user_id):
             "hot": buy_count
         })
     
-    # 4. 排序取 Top 8
+    # 4. 排序取 Top 12
     # 增加一个随机因子，打破默认排序（仅用于演示效果，生产环境可去掉）
     for item in pred_scores:
         # 给分数加一点点微小的随机扰动，防止分数一样时按 ID 排序
@@ -144,7 +147,7 @@ def get_recommend(user_id):
 
     # 打印前几名的分以便调试（请留意后端控制台输出）
     pred_scores.sort(key=lambda x: x["final_score"], reverse=True)
-    top_items = pred_scores[:8]
+    top_items = pred_scores[:12]
     print(f"User {user_id} Top Scores:", [round(x['final_score'], 2) for x in top_items[:3]])
     
     # 5. 组装数据
