@@ -54,6 +54,12 @@
               <span class="label">适用场景</span>
               <span class="value">{{ product.scene || '通用' }}</span>
             </div>
+
+                        <div class="spec-item full-width" v-if="product.description">
+              <span class="label">商品描述</span>
+              <span class="value text-desc">{{ product.description }}</span>
+            </div>
+
             <!-- <div class="spec-item">
               <span class="label">原产地</span>
               <span class="value">{{ product.origin || '未知' }}</span>
@@ -669,5 +675,12 @@ const getRandomColor = (name) => {
   background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
   border: none;
   color: #fff;
+}
+.text-desc {
+  white-space: pre-wrap; /* 保留数据库中的换行符 */
+  line-height: 1.6;
+  color: #666;
+  font-size: 14px;
+  display: block; /* 确保占满容器 */
 }
 </style>
