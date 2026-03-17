@@ -136,6 +136,7 @@
                 <el-upload
                   class="avatar-uploader-btn"
                   action="http://localhost:5000/api/upload/image"
+                  :data="{ type: 'avatar' }" 
                   :show-file-list="false"
                   :on-success="handleAvatarSuccess"
                   :headers="{ Authorization: `Bearer ${token}` }"

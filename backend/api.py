@@ -27,7 +27,9 @@ def allowed_file(filename):
 
 @api_bp.route('/api/upload/image', methods=['POST'])
 def upload_image():
-    img_type = request.args.get('type', 'common')  # 可以传 type=avatar 或 type=product
+    # img_type = request.args.get('type', 'common')  # 可以传 type=avatar 或 type=product
+    # 修改为：优先从 args 获取，如果不行就从 form 获取
+    img_type = request.args.get('type') or request.form.get('type') or 'common' 
     sub_folder = 'avatars' if img_type == 'avatar' else 'products'
     upload_folder = os.path.join(UPLOAD_FOLDER, sub_folder)
     
@@ -75,7 +77,10 @@ def seller_login():
     return jsonify({
         "access_token": access_token, 
         "username": user.username,
-        "role": user.role}), 200
+        "role": user.role,
+        "avatar": user.avatar,
+        "id": user.id
+        }), 200
 
 @api_bp.route('/api/seller/products', methods=['POST'])
 @jwt_required()
@@ -444,6 +449,7 @@ def login():
         "username": user.username, 
         "role": user.role,
         "avatar": user.avatar,
+        "id": user.id
         }), 200
 
 @api_bp.route('/api/products', methods=['GET'])

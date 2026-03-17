@@ -57,10 +57,19 @@
             <img :src="getImageUrl(item.image_url)" class="gallery-img" loading="lazy" />
             <div class="gallery-label-bar">{{ item.name }}</div>
             
-            <!-- 推荐角标 -->
-            <div v-if="item.is_recommended" class="recommend-badge">
-              <el-icon class="fire-icon"><Fire /></el-icon>
-              <span>推荐</span>
+            <!-- 推荐角标 (智能版) -->
+            <div 
+              v-if="item.is_recommended" 
+              class="recommend-badge" 
+              :class="{ 'latest': item.type === 'latest' }"
+            >
+              <el-icon class="badge-icon">
+                <!-- 新品显示星星，协同过滤显示火焰 -->
+                <Star v-if="item.type === 'latest'" />
+                <Fire v-else />
+              </el-icon>
+              <!-- 显示后端传来的具体理由，如 '猜你喜欢 (匹配度 4.5)' -->
+              <span>{{ item.reason || '今日推荐' }}</span>
             </div>
             
           </div>
@@ -108,17 +117,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
 import axios from 'axios'
 import { ArrowRight, VideoPlay, Clock, Fire } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
+console.log('🚀 HomePage.vue 脚本正在初始化...');
+
 const router = useRouter()
 const store = useStore()
 const products = ref([])
 const recommendedProducts = ref([])
+
+// 监控用户登录状态变化
+watch(() => store.state.user, (newUser) => {
+  if (newUser && newUser.id) {
+    console.log('用户状态更新，触发推荐请求:', newUser.id);
+    fetchRecommendations();
+  }
+}, { deep: true });
+
+onMounted(async () => {
+  // 并行获取推荐和商品列表，确保 News 总是有数据
+  // 注意：这里可能取不到 user，所以上面的 watch 很重要
+  fetchRecommendations();
+  fetchProducts();
+})
+
 
 // 资讯列表
 const newsList = ref([
@@ -181,11 +208,27 @@ const displayProducts = computed(() => {
     list = recommendedProducts.value.map(p => ({ 
       ...p, 
       id: p.product_id,   // 确保映射 product_id 为 id
-      is_recommended: true // 这些都是推荐商品，显示金边和推荐标
+      is_recommended: true // // 只要是后端来的，就认为是“推荐体系”内的
     }))
   }
 
-  // (删除了原先的“自动补位”逻辑)
+
+  // 2. 如果没有推荐数据（未登录或接口失败），使用全量商品列表作为保底
+  else if (products.value.length > 0) {
+    // 我们可以显示最新的9个商品，或者随机9个
+    // 这里简单地取最后加入的9个商品(倒序)
+    list = [...products.value].reverse().slice(0, 9).map(p => ({
+       ...p,
+
+       // 前端强行兜底的数据，我们可以选择不加金边(is_recommended: false)，
+       // 但手动给它加一个 reason，以便下文显示标签
+       is_recommended: true, // 👈 改为 true，强制显示标签 
+
+
+       type: 'latest', // 标记为最新
+       reason: '热销单品' // 显示默认理由
+    }))
+  }
   
   // 2. 截取前9个，并添加辅助显示的属性
   return list.slice(0, 9).map(item => ({
@@ -227,10 +270,23 @@ const fetchProducts = async () => {
 }
 
 const fetchRecommendations = async () => {
-  const user = store.state.user || JSON.parse(localStorage.getItem('user'))
-  // 修复：确保 user 存在且有 id，否则默认为 1。避免 undefined 导致 404
-  const userId = (user && user.id) ? user.id : 1; 
+  console.log('🔥 1. 开始执行 fetchRecommendations...');
+  // 增加调试打印
+  const vuexUser = store.state.user;
+  const storageUser = JSON.parse(localStorage.getItem('user'));
+  console.log('检测用户状态: Vuex=', vuexUser, 'Storage=', storageUser);
+
+  const user = vuexUser || storageUser;
+
   
+  // 如果没登录，直接返回
+  if (!user || !user.id) {
+      console.log('未登录用户，跳过个性化推荐');
+      return;
+  }
+
+  const userId = user.id;
+  console.log(`🔥 4. 判定为【已登录】，User ID = ${userId}，准备发起请求...`);
   console.log('Fetching recommend for User ID:', userId); // 调试日志
 
   try {
@@ -278,6 +334,9 @@ const getFakeSales = (id) => {
   // 算法：(ID * 质数) 取余 + 基础销量，保证对于同一个 ID 生成的数字是固定的
   return Math.floor((id * 167) % 800 + 120)
 }
+
+
+
 
 onMounted(async () => {
   // 并行获取推荐和商品列表，确保 News 总是有数据
