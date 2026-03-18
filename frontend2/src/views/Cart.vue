@@ -177,8 +177,7 @@ export default {
       @pay="handlePay"
     />
   </div>
-
-  <!-- Template 中直接使用 -->
+    <!-- 商品推荐组件 -->
 <ProductRecommendation />
 </template>
 
