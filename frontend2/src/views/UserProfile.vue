@@ -99,7 +99,7 @@
                             <el-input v-model.number="rechargeForm.amount" placeholder="请输入充值金额" type="number" min="1" size="large" />
                           </div>
                           
-                          <div class="pay-section-title">由于我们无法对接支付接口，所以选择即可充值</div>
+                          <div class="pay-section-title">目前只支持支付宝充值</div>
                           <div class="pay-types-grid">
                             <div 
                               v-for="type in ['微信', '支付宝', '建行', '农行']" 
@@ -325,11 +325,15 @@
     </el-col>
     </el-row>
   </div>
+
+  <!-- 注册组件 -->
+  <ProductRecommendation />
+
   </template>
   
 <script setup>
 import { ref, onMounted,watch,computed } from 'vue'
-import { ElMessage , ElMessageBox } from 'element-plus'
+import { ElMessage , ElMessageBox,ElLoading } from 'element-plus'
 import { Star, User, Document, Location, } from '@element-plus/icons-vue'
 
 import OrderList from './OrderList.vue'
@@ -337,8 +341,9 @@ import OrderList from './OrderList.vue'
 import { useRouter,useRoute } from 'vue-router'
 import { useStore } from 'vuex'
 
-// 退出登录
+import ProductRecommendation from '@/components/ProductRecommendation.vue'
 
+// 退出登录
 const router = useRouter()
 const store = useStore()
 
@@ -392,6 +397,8 @@ const rechargeForm = ref({
   amount: 0,
   payType: '微信'
 })
+
+
 
 /* ================= 修改密码相关逻辑 (请添加到 script setup 中) ================= */
 const showPasswordDialog = ref(false)
@@ -473,28 +480,81 @@ async function confirmRecharge() {
     ElMessage.error('请输入有效的充值金额')
     return
   }
-  // 用数值加法，防止字符串拼接
-  userForm.value.balance = Number(userForm.value.balance) + Number(rechargeForm.value.amount)
 
-  // 同步到后端
-  const userId = userForm.value.id
-  const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ balance: userForm.value.balance })
-  })
-  const result = await res.json()
-  if (res.ok) {
-    ElMessage.success('充值成功！')
-    showRechargeDialog.value = false
-    rechargeForm.value.amount = 0
-    rechargeForm.value.payType = '微信'
-  } else {
-    ElMessage.error(result.message || '充值失败')
+  try {
+    // 请求后端获取支付链接
+    const res = await fetch(`http://localhost:5000/api/pay/recharge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        amount: rechargeForm.value.amount 
+      })
+    })
+
+    const result = await res.json()
+    if (res.ok && result.pay_url) {
+      // 这里的 payType 逻辑如果是支付宝才跳转
+      if (rechargeForm.value.payType === '支付宝') {
+         window.location.href = result.pay_url
+      } else {
+         ElMessage.warning('目前仅支持支付宝沙箱充值')
+      }
+    } else {
+      ElMessage.error(result.error || '获取支付链接失败')
+    }
+  } catch (e) {
+    ElMessage.error('网络错误')
   }
+}
+
+// 2. 修改 onMounted 方法，添加支付回调检查
+onMounted(async () => {
+  // 处理菜单高亮
+  if (route.query.menu === 'favorites') {
+    activeMenu.value = 'favorites'
+  }
+  
+  // 检查是否是从支付宝回调回来的 (URL 中通过 query 参数携带 out_trade_no)
+  const { out_trade_no } = route.query
+  if (out_trade_no && out_trade_no.startsWith('R')) { // 我们的充值订单以R开头
+      await verifyRecharge(out_trade_no)
+      // 清除 URL 参数，避免刷新重复触发
+      router.replace({ path: route.path, query: { ...route.query, out_trade_no: undefined, trade_no: undefined } })
+  }
+})
+
+// 3. 新增 verifyRecharge 方法
+async function verifyRecharge(out_trade_no) {
+    const loading = ElLoading.service({ text: '正在确认充值结果...' })
+    try {
+        const res = await fetch(`http://localhost:5000/api/pay/check_recharge`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ out_trade_no })
+        })
+        const result = await res.json()
+        if (res.ok) {
+            ElMessage.success('充值到账成功！')
+            // 重新获取用户信息刷新余额
+            // 如果你有 getUserInfo 方法，调用它。或者直接手动更新：
+            // userForm.value.balance = result.new_balance (如果后端返回了)
+            // 这里我们假设页面会重新加载数据
+            saveUserInfo() // 或者刷新整个页面 location.reload()
+            setTimeout(() => location.reload(), 1000)
+        } else {
+            ElMessage.warning(result.error || '充值确认失败，请查看订单状态')
+        }
+    } catch(e) {
+        ElMessage.error('验证支付失败')
+    } finally {
+        loading.close()
+    }
 }
 
 

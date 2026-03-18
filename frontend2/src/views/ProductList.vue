@@ -130,7 +130,7 @@
                 <div class="product-info">
                   <h5 class="product-title" :title="product.name">{{ product.name }}</h5>
                   <p class="product-desc text-muted text-truncate">
-                    {{ product.flower_language || '暂无花语介绍...' }}
+                    {{ product.description || '暂无花语介绍...' }}
                   </p>
                 </div>
                 

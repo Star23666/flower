@@ -1,0 +1,30 @@
+from alipay import AliPay
+import os
+
+# 你的 APPID (请修改这里)
+ALIPAY_APPID = "9021000162622368" 
+
+# 你的应用私钥 (请修改这里，注意格式)
+# 如果你是把私钥直接复制过来的，通常需要加上头尾
+APP_PRIVATE_KEY_STRING = """-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCTUfhtQ9iQ4xEmedsLiWUy1eTX5PDfshGK5m3RZPuWJ02ovIOv9LKdzUaJTAbPDMeRXI1Lyw9gIa88/ywsOjT2yC3cscub6cFrafgoQwV++GVrrpn02TyElxHp9YBsEtV4Wr0rHcnUFfxxJbpc80F8EpS/yMNZTWfLu4clExXxhYw3S6fyydvNrua5xFisSz9HRhe1xVEtJ1kPuhTPxT0Y1YlTW4XJiSw8eI73DH0/zPBDmxowmIpAZaD4SD0jMwV+vaxiYHXVR9lxJvKdARCchsgwGQ0Gwc+UreX1f8m9OsfDbv1YOwf1cBTcaT9WQivXgGD4IQ5s2nmG5M6VHFf5AgMBAAECggEAIvq+musWG+jeZJ1gZk/cSILDEIQasXKteaaXArYQiqmQZfVE612Vn6RjECyOHVFyfVBVeF6hqvi0jC4mheXYN5R2V0WcC8woEeIaeyzWvDwskLHnelyuYukf5sZVFNQv/aDF89vh1UrXIuKLapCTxur+iL8ZqzWW5KgFQcdTWYI42q3iHLaR4y8ObCKWZMVoDOOr/S2NMSptOLg29YIGz4KeTCMLJo62vBzLtx3xJRbmAvyQw7ULGOa5S0kJcjgBog9lnICrWznIXgwzHDWoaz/EOq0X/HERoh1iN/01T3l/PI8g4yDk5aiMfahoqubETqFqzHJ/uR2ngQasX6x2FQKBgQDM6+bt+sZelhQEpeVf5Myl4s5UjjogZWqGN68iYECt00kcG0sLQ7iaCmpoFW/AQVVHBi/AQxqbDxFIehGVv7q4k7S7vaOPeRhN/fR9oEaV6fAAGDMvpGEZYjFlWWA0CcfblFJUqpFLh2LIqu22PzCmt4as3STGWQhN+UgiYN+w1wKBgQC4CoN2B/4/adT+8lfINXmu47lOgAsT2M3Pv6eV//YRqBGexkwknsHb1bR2NhiDoKT7pZR73MfN5WBaGuhRGMomBqPNY8y2QgrMjQhrzPUaB+LpJ0IYyAvjG0G3Ui8PgyJl11JEQUCDOCZd+U1/yju7GGmMqD+lrPonO1G647GTrwKBgQCfEFIt0eXfD9G0Fe3pNJmh/l64hboa4X4BdwHLxjkOdJ4gYhMrSELn10PnTRR0gIIoYmX4cF4blGOPBanWun++vHCi9j4apR23lHQOe7WusmsoN6Crz4XLhUvgZrLlUd4/1G7f55JmtU15hCyGtaAXGQhB8FqWWA+5LtHOVbHs+wKBgFUL3rYTeYU6Vcg+mxwUwhd0enRxLS1NucXwDfR+JOsB3Kqffh5KEtGQzuT1mJxzBuqXGKeoXdiiz8SzvHmFWBz8YoOOQ9JRcIYYAjU2sGkIDe6qSpwDDaM0PEkHvGGRurqPJyANe09oCirRAuQzwyhxXo02Trsz1SF+AwW3JJ9XAoGAMqrN4LWU0uUEfXRd7/qfhU7gUYjKu2Vf3h7Idfso1c3idn4AHP9AFhRzmQj5lvZ5HCEckBm0P1QJdioJsVsjIGk9OULAFknLTKcZSzJfxmAq4P0lEsny1+2ZN5IiKRXjzj88A5ZdZRNSbMQZUviZma8gHqRVNlVDYCHdYNsJFIQ=
+-----END PRIVATE KEY-----"""
+
+# 你的支付宝公钥 (请修改这里，注意不是应用公钥)
+ALIPAY_PUBLIC_KEY_STRING = """-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtrDjzqr5Yv99j6OOf0mcEhjxhe3YKhiW/k0Kn2O3gH7Rev/kOhT9YsMTatX4+Vxz9MFXYBJ/zVA6IYTUrPQIdAQITydYrfXU0/K+RCjqF5kL7Nw08X8yR7McEoahWtWLN/kVTKbjmTzznkb5cYE3zetPSh0vOwL0ShAZHoa9NMug0McqEtY9bF5a79K67DoNx14gDUM9C44r4cR4SPwrWXqbFBOLPVSsIMYPT/xFphdEzOut3CwHVRcgC7r+g1ddF3TyDZVMdzSzi5ht02fWMgIrZECOvE9mZ/5zUotvIubx04XnBAQ4CFor0ALkc+ZgmaeQM9XV7aux8tx/BHpuPQIDAQAB
+-----END PUBLIC KEY-----"""
+
+# 初始化支付宝实例
+alipay_client = AliPay(
+    appid=ALIPAY_APPID,
+    app_notify_url=None,  # 默认回调 url
+    app_private_key_string=APP_PRIVATE_KEY_STRING,
+    # 支付宝的公钥，验证支付宝回传消息使用，不是你自己的公钥
+    alipay_public_key_string=ALIPAY_PUBLIC_KEY_STRING,
+    sign_type="RSA2",  # RSA 或者 RSA2
+    debug=True  # 默认 False，True 代表是沙箱环境
+)
+
+# 支付网关 (沙箱环境)
+ALIPAY_GATEWAY = "https://openapi-sandbox.dl.alipaydev.com/gateway.do"

@@ -160,7 +160,7 @@ def get_recommend(user_id):
                     "name": row["name"],
                     "price": float(row["price"]),
                     "image_url": row["image_url"],
-                    "reason": f"猜你喜欢 (匹配度 {round(item['score'], 1)})", # 可以给前端显示理由
+                    "reason": f"猜你喜欢 ", # (匹配度 {round(item['score'], 1)})可以给前端显示理由
                     "type": "cf" # 标记为协同过滤推荐
                 })
         except Exception as e:

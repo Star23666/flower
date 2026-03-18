@@ -177,6 +177,9 @@ export default {
       @pay="handlePay"
     />
   </div>
+
+  <!-- Template 中直接使用 -->
+<ProductRecommendation />
 </template>
 
 <script setup>
@@ -187,6 +190,8 @@ import { ElMessageBox, ElMessage } from 'element-plus'
 import { Delete, CircleCheckFilled, ArrowLeft } from '@element-plus/icons-vue'
 import CheckoutModal from './CheckoutModal.vue'
 import OrderList from './OrderList.vue'
+
+import ProductRecommendation from '@/components/ProductRecommendation.vue'
 
 // Vuex & Router
 const store = useStore()

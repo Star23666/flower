@@ -186,6 +186,9 @@
       </template>
     </el-dialog>
   </div>
+
+  <!-- 推荐组件 -->
+   <ProductRecommendation/>
 </template>
 
 <script setup>
@@ -194,6 +197,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 
+import ProductRecommendation from '@/components/ProductRecommendation.vue'
 // 状态定义
 const filters = ref({ keyword: '', status: '' })
 const showDetailModal = ref(false)

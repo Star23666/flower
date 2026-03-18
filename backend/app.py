@@ -58,6 +58,8 @@ app.register_blueprint(recommend_bp)
 print("Registered blueprints:", app.blueprints)
 print("Routes:", [str(rule) for rule in app.url_map.iter_rules() if '/api/recommend' in str(rule)])
 
+print(app.url_map)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 确保表结构同步

@@ -11,6 +11,8 @@ from decimal import Decimal
 import time
 import random
 
+from alipay_config import alipay_client, ALIPAY_GATEWAY
+
 def generate_order_no(user_id):
     return f"{int(time.time())}{user_id}{random.randint(1000,9999)}"
 
@@ -24,6 +26,104 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@api_bp.route('/api/pay/recharge', methods=['POST'])
+@jwt_required()
+def alipay_recharge():
+    # 获取用户ID，注意这里要兼容你的 token 格式 (如果是 dict 取 ['id']，如果是 str 直接用)
+    current_user = get_jwt_identity()
+    user_id = current_user['id'] if isinstance(current_user, dict) else int(current_user)
+    
+    data = request.json
+    amount = data.get('amount')
+    try:
+        amount = float(amount)
+        if amount <= 0:
+            raise ValueError
+    except:
+        return jsonify({'error': '无效的充值金额'}), 400
+
+    # 1. 生成唯一的充值订单号 (R开头代表充值)
+    out_trade_no = f"R{int(time.time())}{user_id}{random.randint(1000,9999)}"
+
+    # 2. 创建一个“充值订单”记录到数据库 (防止重复处理)
+    # 我们复用 Order 表，状态设为 pending，total_amount 为充值金额
+    recharge_order = Order(
+        user_id=user_id,
+        order_no=out_trade_no,
+        total_amount=amount,
+        status='待支付', # 待支付
+        pay_method='支付宝充值',
+        receiver='用户充值', # 占位
+        receiver_phone='',
+        receiver_address=''
+    )
+    db.session.add(recharge_order)
+    db.session.commit()
+
+    # 3. 调用支付宝 SDK 生成支付链接
+    # 注意：return_url 设置为前端的用户中心页面，带上参数
+    order_string = alipay_client.api_alipay_trade_page_pay(
+        out_trade_no=out_trade_no,
+        total_amount=str(round(amount, 2)), 
+        subject=f"账户充值 - {amount}元",
+        return_url="http://localhost:8080/user/profile", 
+        notify_url=None 
+    )
+    
+    pay_url = f"{ALIPAY_GATEWAY}?{order_string}"
+    return jsonify({'pay_url': pay_url})
+
+
+# ----------------------------------------------------
+# 新增：充值结果验证接口 (回调时调用)
+# ----------------------------------------------------
+@api_bp.route('/api/pay/check_recharge', methods=['POST'])
+@jwt_required()
+def check_recharge():
+    current_user = get_jwt_identity()
+    user_id = current_user['id'] if isinstance(current_user, dict) else int(current_user)
+    
+    data = request.json
+    out_trade_no = data.get('out_trade_no')
+    
+    # 1. 在数据库查找该充值订单
+    order = Order.query.filter_by(order_no=out_trade_no, user_id=user_id).first()
+    
+    if not order:
+        return jsonify({'error': '订单不存在'}), 404
+        
+    # 2. 幂等性检查：如果订单已经是“已支付”，直接返回成功，不要重复加钱
+    if order.status == '已支付':
+         return jsonify({'message': '充值已到账', 'new_balance': 0}), 200
+
+    try:
+        # 3.通过支付宝接口查询订单真实状态
+        result = alipay_client.api_alipay_trade_query(out_trade_no=out_trade_no)
+        
+        if result.get("code") == "10000" and result.get("trade_status") == "TRADE_SUCCESS":
+            # 4. 支付成功：更新订单状态 + 给用户加钱
+            amount = float(result.get("total_amount"))
+            
+            # 更新订单状态
+            order.status = '已支付'
+            
+            # 给用户加余额
+            user = User.query.get(user_id)
+            user.balance = float(user.balance) + amount
+            
+            db.session.commit()
+            
+            return jsonify({'message': '充值成功', 'new_balance': user.balance}), 200
+        else:
+            return jsonify({'error': '支付未完成'}), 400
+            
+    except Exception as e:
+        print(e)
+        return jsonify({'error': '验证失败，请稍后重试'}), 500
+
+
 
 @api_bp.route('/api/upload/image', methods=['POST'])
 def upload_image():
@@ -930,3 +1030,4 @@ def add_comment(product_id):
         db.session.rollback()
         print('评论保存异常:', e)
         return jsonify({'message': '评论保存失败', 'error': str(e)}), 500
+    
