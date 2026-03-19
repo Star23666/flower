@@ -73,7 +73,15 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  // === 新增：滚动行为控制 ===
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    } else {
+      return { top: 0, behavior: 'smooth' } 
+    }
+  }
 });
 
 // --- 路由守卫修正版 ---
