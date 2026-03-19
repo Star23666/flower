@@ -46,6 +46,8 @@
               <span class="label">适用对象</span>
               <span class="value">{{ product.target || '通用' }}</span>
             </div>
+
+            
             <!-- <div class="spec-item full-width">
               <span class="label">鲜花花语</span>
               <span class="value text-highlight">{{ product.flower_language2 || '暂无花语' }}</span>
@@ -132,6 +134,9 @@
   </div>
 </div>
     </div>
+
+        <!-- 商品推荐组件 -->
+<ProductRecommendation />
   </template>
   
 <script setup>
@@ -144,8 +149,7 @@ import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import AppBreadcrumbs from '@/components/AppBreadcrumbs.vue'
-
-
+import ProductRecommendation from '@/components/ProductRecommendation.vue'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
