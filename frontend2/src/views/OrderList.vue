@@ -93,7 +93,7 @@
         <!-- 卡片底部：操作按钮 -->
         <div class="card-actions" @click.stop>
           <el-button 
-            v-if="order.status === '已发货'" 
+            v-if="['已发货', '退款被拒绝'].includes(order.status)" 
             type="success" 
             plain 
             size="small" 
@@ -125,66 +125,104 @@
     </div>
 
     <!-- 订单详情弹窗 -->
-    <el-dialog
+    <!-- 订单详情抽屉 (替换原 el-dialog) -->
+    <el-drawer
       v-model="showDetailModal"
       title="订单详情"
-      width="600px"
-      custom-class="glass-dialog"
-      align-center
+      direction="rtl"
+      size="600px" 
+      append-to-body
+      class="order-detail-drawer"
     >
-      <div v-if="selectedOrder" class="detail-content">
+      <div v-if="selectedOrder" class="detail-content-wrapper">
+        <!-- 状态区域 -->
+        <div class="status-section">
+           <div class="current-status" :class="getStatusColorClass(selectedOrder.status)">
+             {{ selectedOrder.status }}
+           </div>
+           <span class="order-id">订单号：{{ selectedOrder.order_no }}</span>
+        </div>
+
         <!-- 状态步骤条 -->
-        <el-steps :active="getStepActive(selectedOrder.status)" align-center finish-status="success" class="mb-4">
-          <el-step title="已下单"></el-step>
-          <el-step title="已支付"></el-step>
-          <el-step title="已发货"></el-step>
-          <el-step title="已完成"></el-step>
-        </el-steps>
+        <div class="steps-box">
+          <el-steps :active="getStepActive(selectedOrder.status)" align-center finish-status="success">
+            <el-step title="下单" icon="Document"></el-step>
+            <el-step title="支付" icon="Wallet"></el-step>
+            <el-step title="发货" icon="Van"></el-step>
+            <el-step title="完成" icon="CircleCheck"></el-step>
+          </el-steps>
+        </div>
 
-        <div class="info-grid">
-          <div class="info-item">
-            <label>收货人</label> <span>{{ selectedOrder.receiver }}</span>
+        <!-- 收货信息卡片 -->
+        <div class="detail-card">
+          <h5 class="card-title"><el-icon><Location /></el-icon> 收货信息</h5>
+          <div class="info-row">
+            <span class="label">收货人：</span>
+            <span class="val">{{ selectedOrder.receiver }}</span>
           </div>
-          <div class="info-item">
-            <label>联系电话</label> <span>{{ selectedOrder.receiver_phone }}</span>
+          <div class="info-row">
+            <span class="label">电话：</span>
+            <span class="val">{{ selectedOrder.receiver_phone }}</span>
           </div>
-          <div class="info-item full">
-            <label>收货地址</label> <span>{{ selectedOrder.receiver_address }}</span>
+          <div class="info-row">
+            <span class="label">地址：</span>
+            <span class="val">{{ selectedOrder.receiver_address }}</span>
           </div>
-          <div class="info-item full" v-if="selectedOrder.remark">
-             <label>备注</label> <span class="text-muted">{{ selectedOrder.remark }}</span>
+          <div class="info-row" v-if="selectedOrder.remark">
+             <span class="label">备注：</span>
+             <span class="val text-muted">{{ selectedOrder.remark }}</span>
           </div>
         </div>
 
-        <div class="product-list mt-3">
-          <div v-for="item in selectedOrder.items" :key="item.product_id" class="detail-item">
-            <img :src="fixImageUrl(item.image_url)" class="detail-thumb">
-            <div class="detail-info">
-              <div class="name">{{ item.product_name }}</div>
-              <div class="price">¥{{ item.unit_price }} x {{ item.quantity }}</div>
+        <!-- 商品列表卡片 -->
+        <div class="detail-card">
+          <h5 class="card-title"><el-icon><Goods /></el-icon> 商品清单</h5>
+          <div class="product-list-sc">
+            <div v-for="item in selectedOrder.items" :key="item.product_id" class="detail-item">
+              <el-image :src="fixImageUrl(item.image_url)" class="detail-thumb" fit="cover" />
+              <div class="detail-info">
+                <div class="name">{{ item.product_name }}</div>
+                <div class="meta">
+                   <span class="price">¥{{ item.unit_price }}</span>
+                   <span class="x">x</span>
+                   <span class="qty">{{ item.quantity }}</span>
+                </div>
+              </div>
+              <div class="total-col">¥{{ (item.unit_price * item.quantity).toFixed(2) }}</div>
             </div>
-            <div class="total">¥{{ (item.unit_price * item.quantity).toFixed(2) }}</div>
           </div>
-        </div>
-        
-        <div class="detail-footer mt-4">
-          <div class="total-bar">
-            <span>实付合计:</span>
-            <span class="final-price">¥{{ selectedOrder.total_amount }}</span>
+          
+          <div class="summary-row">
+            <div class="sum-label">实付金额</div>
+            <div class="sum-val">¥ <span class="num">{{ selectedOrder.total_amount }}</span></div>
           </div>
         </div>
       </div>
+
+      <!-- 底部操作栏 -->
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showDetailModal = false">关闭</el-button>
+        <div class="drawer-footer-actions">
+           <el-button @click="showDetailModal = false">关闭</el-button>
+           
+           <!-- 修改点：重新申请退款 -->
            <el-button 
-            v-if="selectedOrder && ['已支付', '已发货'].includes(selectedOrder.status)"
+            v-if="selectedOrder && ['已支付', '已发货', '退款被拒绝','已完成'].includes(selectedOrder.status)"
             type="warning"
+            plain
             @click="handleRefund(selectedOrder)"
-          >申请退款</el-button>
-        </span>
+          >{{ selectedOrder.status === '退款被拒绝' ? '重新申请退款' : '申请退款' }}</el-button>
+           
+           <!-- 修改点：确认收货 -->
+           <el-button 
+            v-if="selectedOrder && ['已发货', '退款被拒绝'].includes(selectedOrder.status)"
+            type="primary"
+            class="confirm-btn"
+            color="#ff758c"
+            @click="confirmReceive(selectedOrder)"
+          >确认收货</el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 
   <!-- 推荐组件 -->
@@ -196,6 +234,7 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
+import { Location, Goods,Picture } from '@element-plus/icons-vue' // 补充引入这些图标
 
 import ProductRecommendation from '@/components/ProductRecommendation.vue'
 // 状态定义
@@ -330,6 +369,14 @@ const getStepActive = (status) => {
     if(status === '已发货') return 2
     if(status === '已完成') return 3
     return 1 
+}
+
+const getStatusColorClass = (status) => {
+  if (status === '已支付') return 'text-primary'
+  if (status === '已发货') return 'text-warning'
+  if (status === '已完成') return 'text-success'
+  if (status.includes('退款')) return 'text-danger'
+  return 'text-info'
 }
 </script>
 
@@ -533,5 +580,110 @@ const getStepActive = (status) => {
   color: #ff758c;
   font-weight: bold;
   margin-left: 8px;
+}
+
+/* Drawer 样式优化 */
+:deep(.el-drawer__body) {
+  background-color: #f7f8fa; /* 浅灰背景 */
+  padding: 0 !important; /* 去除默认内边距，自己控制 */
+  overflow-y: auto;
+}
+
+.detail-content-wrapper {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.current-status {
+  font-size: 24px;
+  font-weight: bold;
+}
+.current-status.text-primary { color: #409eff; }
+.current-status.text-warning { color: #e6a23c; }
+.current-status.text-success { color: #67c23a; }
+.current-status.text-danger  { color: #f56c6c; }
+.current-status.text-info    { color: #909399; }
+
+.order-id {
+  color: #999;
+  font-size: 13px;
+}
+
+.steps-box {
+  background: #fff;
+  padding: 20px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.detail-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #333;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.info-row .label { color: #999; width: 70px; flex-shrink: 0; }
+.info-row .val { color: #333; }
+
+/* 商品列表美化 */
+.detail-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.detail-item:last-child { border-bottom: none; }
+
+.detail-thumb { width: 60px; height: 60px; border-radius: 6px; margin-right: 12px; border: 1px solid #eee; }
+.detail-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; height: 50px; }
+.detail-info .name { font-size: 14px; color: #333; font-weight: 500;}
+.detail-info .meta { color: #999; font-size: 12px; }
+.detail-info .price { color: #333; }
+.total-col { font-weight: bold; width: 80px; text-align: right; color: #333; }
+
+.summary-row {
+  display: flex;
+  justify-content: flex-between;
+  align-items: center;
+  margin-top: 16px;
+  border-top: 1px dashed #eee;
+  padding-top: 16px;
+  flex-direction: row-reverse; /* 让金额靠右 */
+  gap: 10px;
+}
+.sum-label { font-size: 14px; color: #666; }
+.sum-val { color: #ff758c; font-weight: bold; font-size: 16px; }
+.sum-val .num { font-size: 24px; }
+
+.drawer-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
 }
 </style>

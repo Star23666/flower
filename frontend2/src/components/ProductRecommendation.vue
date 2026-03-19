@@ -78,8 +78,25 @@ const fetchRecommendations = async () => {
 }
 
 // 2. 跳转详情
+// 2. 跳转详情
 const goToDetail = (id) => {
-  router.push(`/product/${id}`)
+  // 保存当前路径
+  const currentPath = route.path
+  const targetPath = `/product/${id}`
+
+  // 1. 如果已经在该商品详情页，直接滚动到顶部
+  if (currentPath === targetPath) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  
+  // 2. 跳转并在跳转后滚动
+  router.push(targetPath).then(() => {
+    // 稍微延迟一下确保 DOM 更新
+    setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 100)
+  })
 }
 
 // // 3. 生成假销量 (为了好看)

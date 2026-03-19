@@ -8,7 +8,7 @@ export default {
 <template>
   <div class="cart-page">
     <!-- 支付成功弹窗 -->
-    <el-dialog v-model="showPaySuccessModal" title="支付成功" width="400px" center destroy-on-close :show-close="false">
+    <!-- <el-dialog v-model="showPaySuccessModal" title="支付成功" width="400px" center destroy-on-close :show-close="false">
       <div class="pay-success-content">
         <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
         <p class="success-title">您的订单已支付成功！</p>
@@ -20,7 +20,7 @@ export default {
           <el-button type="primary" @click="toOrderList">查看我的订单</el-button>
         </div>
       </template>
-    </el-dialog>
+    </el-dialog> -->
 
     <!-- 顶部轮播图展示区 (仅在购物车模式显示) -->
     <div class="cart-banner-section" v-if="!showOrderList">
@@ -182,11 +182,11 @@ export default {
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted,h } from 'vue'
 import { useStore } from 'vuex'
 import { useRoute } from 'vue-router'
-import { ElMessageBox, ElMessage } from 'element-plus'
-import { Delete, CircleCheckFilled, ArrowLeft } from '@element-plus/icons-vue'
+import { ElMessageBox, ElMessage,ElNotification } from 'element-plus'
+import { Delete, ArrowLeft } from '@element-plus/icons-vue'
 import CheckoutModal from './CheckoutModal.vue'
 import OrderList from './OrderList.vue'
 
@@ -198,7 +198,7 @@ const route = useRoute()
 
 // Reactive Data
 const showCheckout = ref(false)
-const showPaySuccessModal = ref(false)
+// const showPaySuccessModal = ref(false)
 const showOrderList = ref(false)
 const addressList = ref([])
 const userBalance = ref(0)
@@ -284,7 +284,6 @@ const loadBalance = async () => {
 }
 
 const toOrderList = () => {
-  showPaySuccessModal.value = false
   showOrderList.value = true
 }
 
@@ -324,7 +323,29 @@ const handlePay = async ({ addressId, remark }) => {
       store.commit('clearCart') // 可以优化为只清除选中的商品
       await loadBalance()
       await loadOrders()
-      showPaySuccessModal.value = true
+      ElNotification({
+        title: '支付支付成功 ヾ(≧▽≦*)o',
+        message: h('div', { style: 'color: teal' }, [
+          h('p', { style: 'margin: 0 0 10px 0' }, '您的订单已确认，我们会尽快为您发货！'),
+          h('div', { style: 'display: flex; gap: 10px' }, [
+            h('button', { 
+              class: 'el-button el-button--primary el-button--small',
+              onClick: () => { 
+                toOrderList(); // 跳转到订单列表
+                ElNotification.closeAll(); // 关闭通知
+              }
+            }, '查看订单'),
+            h('button', { 
+              class: 'el-button el-button--default el-button--small',
+              onClick: () => ElNotification.closeAll() 
+            }, '继续逛逛')
+          ])
+        ]),
+        type: 'success',
+        duration: 5000,
+        position: 'top-right', // 改为右上角弹出
+        offset: 100 // 稍微往下一点，避开 Header
+      })
       return { success: true }
     } else {
       ElMessage.error(data.message || '支付失败')

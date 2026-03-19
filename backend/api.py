@@ -376,14 +376,36 @@ def confirm_order(order_id):
     if request.method == 'OPTIONS':
         # 预检请求直接返回
         return '', 204
-    user_id = get_jwt_identity()
+    # 关键修复：强制转换为 int 类型，防止 user_id 是字符串导致比对失败
+    try:
+        current_identity = get_jwt_identity()
+        if not current_identity:
+             return jsonify({"message": "请先登录"}), 401
+        
+        # 兼容处理：有些版本可能存的是字典，有些是字符串
+        if isinstance(current_identity, dict):
+            user_id = int(current_identity.get('id'))
+        else:
+            user_id = int(current_identity)
+            
+    except (ValueError, TypeError):
+        return jsonify({"message": "用户ID无效"}), 401
+
     order = Order.query.get(order_id)
+    
+    # 严格校验权限
     if not order or order.user_id != user_id:
-        return jsonify({"message": "订单不存在"}), 404
-    if order.status != '已发货':
-        return jsonify({"message": "只有已发货订单才能确认收货"}), 400
+        return jsonify({"message": "订单不存在或无权操作"}), 404
+        
+    # === 修改点：允许 [已发货] 和 [退款被拒绝] 的订单进行确认收货 ===
+    if order.status not in ['已发货', '退款被拒绝']:
+        if order.status == '已完成':
+             return jsonify({"message": "订单已确认收货"}), 200
+        return jsonify({"message": "当前状态无法确认收货"}), 400
+       
     order.status = '已完成'
     db.session.commit()
+    
     return jsonify({"message": "订单已确认收货"}), 200
 
 @api_bp.route('/api/orders/<int:order_id>/refund', methods=['POST'])
@@ -402,8 +424,8 @@ def apply_refund(order_id):
         user.balance += order.total_amount
         db.session.commit()
         return jsonify({'message': '退款成功，金额已原路退回'}), 200
-    elif order.status == '已发货':
-        # 进入审核
+    # === 修改点：允许 [已发货] 和 [退款被拒绝] 的订单发起/重新发起退款 ===
+    elif order.status in ['已发货', '退款被拒绝', '已完成']:
         order.status = '退款审核中'
         db.session.commit()
         return jsonify({'message': '退款申请已提交，等待审核'}), 200
@@ -413,33 +435,81 @@ def apply_refund(order_id):
 @api_bp.route('/api/orders/<int:order_id>/refund/approve', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def approve_refund(order_id):
-    user_id = get_jwt_identity()
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    # 1. 强制转换 user_id 为 int
+    try:
+        current_identity = get_jwt_identity()
+        if isinstance(current_identity, dict):
+            user_id = int(current_identity.get('id'))
+        else:
+            user_id = int(current_identity)
+    except:
+        return jsonify({'message': '用户身份无效'}), 401
+
     user = User.query.get(user_id)
-    # 仅商家或管理员可操作
-    if user.role not in ['seller', 'admin']:
-        return jsonify({'message': '无权限'}), 403
+    
+    # 2. 权限校验
+    if not user or user.role not in ['seller', 'admin']:
+        return jsonify({'message': '无权限操作'}), 403
+
+    # 3. 业务逻辑
     order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'message': '订单不存在'}), 404
+        
     if order.status != '退款审核中':
-        return jsonify({'message': '订单状态不正确'}), 400
+        return jsonify({'message': '订单状态不正确，无法审核'}), 400
+
     order.status = '已退款'
+    
+    # 给买家退余额
     buyer = User.query.get(order.user_id)
-    buyer.balance += order.total_amount
+    if buyer:
+        current_balance = buyer.balance if buyer.balance is not None else Decimal('0.00')
+        refund_amount = order.total_amount if order.total_amount is not None else Decimal('0.00')
+        buyer.balance = current_balance + refund_amount
+    
     db.session.commit()
-    return jsonify({'message': '退款审核通过，已退款'}), 200
+    return jsonify({'message': '退款审核通过，金额已退回买家账户'}), 200
 
 @api_bp.route('/api/orders/<int:order_id>/refund/reject', methods=['POST', 'OPTIONS'])
 @jwt_required()
 def reject_refund(order_id):
-    user_id = get_jwt_identity()
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    # 1. 强制转换 user_id 为 int
+    try:
+        current_identity = get_jwt_identity()
+        if isinstance(current_identity, dict):
+            user_id = int(current_identity.get('id'))
+        else:
+            user_id = int(current_identity)
+    except:
+        return jsonify({'message': '用户身份无效'}), 401
+
     user = User.query.get(user_id)
-    if user.role not in ['seller', 'admin']:
-        return jsonify({'message': '无权限'}), 403
+    
+    # 2. 权限校验
+    if not user or user.role not in ['seller', 'admin']:
+        return jsonify({'message': '无权限操作'}), 403
+
+    # 3. 业务逻辑
     order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'message': '订单不存在'}), 404
+
     if order.status != '退款审核中':
-        return jsonify({'message': '订单状态不正确'}), 400
-    order.status = '退款被拒绝'
+        return jsonify({'message': '订单状态不正确，无法审核'}), 400
+
+    # 状态回滚为“已发货”或者变成特定的“退款被拒绝”
+    # 通常变成“已发货”让用户继续收货，或者“退款被拒绝”明确告知
+    order.status = '退款被拒绝' # 或者 '退款被拒绝'
+    
     db.session.commit()
-    return jsonify({'message': '已拒绝退款'}), 200
+    return jsonify({'message': '已拒绝退款申请，订单恢复为已发货状态'}), 200
 
 @api_bp.route('/api/orders', methods=['POST'])
 @jwt_required()
