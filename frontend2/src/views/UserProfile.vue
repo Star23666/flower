@@ -138,6 +138,8 @@
                   action="http://localhost:5000/api/upload/image"
                   :data="{ type: 'avatar' }" 
                   :show-file-list="false"
+                  accept="image/png,image/jpeg,image/gif"
+                  :before-upload="beforeAvatarUpload"
                   :on-success="handleAvatarSuccess"
                   :headers="{ Authorization: `Bearer ${token}` }"
                 >
@@ -562,6 +564,29 @@ async function verifyRecharge(out_trade_no) {
 // 获取token
 const token = localStorage.getItem('token')
 
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/gif']
+const ALLOWED_AVATAR_EXTS = ['jpg', 'jpeg', 'png', 'gif']
+const MAX_AVATAR_SIZE_MB = 2
+
+function beforeAvatarUpload(rawFile) {
+  const mimeType = (rawFile.type || '').toLowerCase()
+  const ext = (rawFile.name.split('.').pop() || '').toLowerCase()
+
+  const validType = ALLOWED_AVATAR_TYPES.includes(mimeType) || ALLOWED_AVATAR_EXTS.includes(ext)
+  if (!validType) {
+    ElMessage.error('仅支持 JPG/PNG/GIF 格式图片')
+    return false
+  }
+
+  const validSize = rawFile.size / 1024 / 1024 <= MAX_AVATAR_SIZE_MB
+  if (!validSize) {
+    ElMessage.error('图片大小不能超过 2MB')
+    return false
+  }
+
+  return true
+}
+
 const defaultAvatar = 'http://localhost:5000/static/uploads/avatars/default-avatar.jpg'
 function handleAvatarSuccess(response) {
   userForm.value.avatar = 'http://localhost:5000' + response.url
@@ -659,6 +684,11 @@ async function saveUserInfo() {
     // 只有当用户填写了新密码时才提交
     ...(userForm.value.password ? { password: userForm.value.password } : {})
   }
+
+  if (userForm.value.password && String(userForm.value.password).trim() !== '') {
+    data.password = userForm.value.password
+  }
+  
   // 获取当前用户ID（可从 profile API 获取或 JWT 解析，假设 userForm 里有 id 字段）
   const userId = userForm.value.id
   const res = await fetch(`http://localhost:5000/api/users/${userId}`, {

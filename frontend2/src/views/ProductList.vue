@@ -1,4 +1,4 @@
-<template>
+product<template>
   <div class="product-list-page">
     <!-- 头部轮播图区域 -->
     <div class="banner-section">
@@ -130,7 +130,7 @@
                 <div class="product-info">
                   <h5 class="product-title" :title="product.name">{{ product.name }}</h5>
                   <p class="product-desc text-muted text-truncate">
-                    {{ product.description || '暂无花语介绍...' }}
+                    {{ product.description || '暂无描述' }}
                   </p>
                 </div>
                 

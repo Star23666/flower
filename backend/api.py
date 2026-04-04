@@ -470,7 +470,11 @@ def approve_refund(order_id):
         current_balance = buyer.balance if buyer.balance is not None else Decimal('0.00')
         refund_amount = order.total_amount if order.total_amount is not None else Decimal('0.00')
         buyer.balance = current_balance + refund_amount
-    
+    # 退回商品库存
+    for item in order.items:
+        product = Product.query.get(item.product_id)
+        if product:
+            product.stock = (product.stock or 0) + item.quantity
     db.session.commit()
     return jsonify({'message': '退款审核通过，金额已退回买家账户'}), 200
 
@@ -756,18 +760,18 @@ def update_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "用户不存在"}), 404
-    data = request.json
+    data = request.json or {}
     user.username = data.get('username', user.username)
     user.email = data.get('email', user.email)
     user.gender = data.get('gender', user.gender)
     user.phone = data.get('phone', user.phone)
     user.avatar = data.get('avatar', user.avatar)
-    user.password = data.get('password', user.password)
+
     user.balance = data.get('balance',user.balance)
     
     # 关键修改：如果传了 password，要进行 hash 加密
     new_password = data.get('password')
-    if new_password:
+    if new_password is not None and str(new_password).strip() != '':
         user.password = generate_password_hash(new_password)
     
     db.session.commit()
