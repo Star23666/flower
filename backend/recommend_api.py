@@ -37,40 +37,51 @@ def load_all_products():
         return pd.DataFrame()
 
 def generate_behavior_data():
-    """从数据库读取真实用户交互数据"""
-    behavior_list = []
+    """从数据库读取真实用户交互数据（根据图片逻辑：按行为累加权重分）"""
+    behavior_dict = {} # 格式: { (user_id, product_id): total_score }
+    
     try:
-        # 必须在 app context 下运行查询
-        # 1. 订单数据 (购买 = 5分，权重最高)
-        # 查出谁买了什么
+        # 图片规则 3: 下过单该商品权重 +3 (你代码里对应购买)
         orders = db.session.query(Order.user_id, OrderItem.product_id)\
             .join(OrderItem, Order.id == OrderItem.order_id).all()
         for uid, pid in orders:
-            behavior_list.append({"user_id": uid, "product_id": pid, "score": 5.0})
+            key = (uid, pid)
+            behavior_dict[key] = behavior_dict.get(key, 0) + 3.0
 
-        # 2. 收藏数据 (收藏 = 4分，强意向)
+        # 图片规则 1: 收藏权重 +1
         favorites = UserFavorite.query.with_entities(UserFavorite.user_id, UserFavorite.product_id).all()
         for uid, pid in favorites:
-            behavior_list.append({"user_id": uid, "product_id": pid, "score": 4.0})
+            key = (uid, pid)
+            behavior_dict[key] = behavior_dict.get(key, 0) + 1.0
 
-        # 3. 点赞数据 (点赞 = 3分，轻度喜欢)
+        # 图片规则 2 点赞 +2
         likes = Like.query.with_entities(Like.user_id, Like.product_id).all()
         for uid, pid in likes:
-            behavior_list.append({"user_id": uid, "product_id": pid, "score": 3.0})
+            key = (uid, pid)
+            behavior_dict[key] = behavior_dict.get(key, 0) + 2.0
+
+        # 图片规则 4: 评论该商品权重 +2 
+        try:
+            from models import Comment 
+            comments = db.session.query(Comment.user_id, Comment.product_id).all()
+            for uid, pid in comments:
+                key = (uid, pid)
+                behavior_dict[key] = behavior_dict.get(key, 0) + 2.0
+        except Exception:
+            # 如果没有 Comment 模型，暂且忽略
+            pass
             
     except Exception as e:
         print(f"⚠️ 读取真实交互数据失败: {e}")
 
-    # 如果没有任何交互数据（系统刚初始化），直接返回空
-    if not behavior_list:
-        print("ℹ️ 暂无交互数据，协同过滤暂不启用")
+    # 将字典转为 DataFrame
+    if not behavior_dict:
         return pd.DataFrame()
 
+    behavior_list = [{"user_id": k[0], "product_id": k[1], "score": v} for k, v in behavior_dict.items()]
     df = pd.DataFrame(behavior_list)
-    # 合并：如果一个用户对同一商品既买了又收藏了，取最高分 (5分)
-    df = df.groupby(["user_id", "product_id"], as_index=False)["score"].max()
     
-    print(f"✅ 生成协同过滤训练数据: {len(df)} 条交互记录")
+    print(f"✅ 生成规则加权数据: {len(df)} 条交互记录")
     return df
 
 def train_model():
@@ -90,7 +101,8 @@ def train_model():
         return
 
     # Surprise 库标准流程
-    reader = Reader(rating_scale=(3, 5))
+    # 根据最新的权重累加规则：最低1分(仅收藏)，最高8分(收藏1+点赞2+评论2+购买3)
+    reader = Reader(rating_scale=(1, 8))
     dataset = Dataset.load_from_df(global_behavior_df[["user_id", "product_id", "score"]], reader)
     trainset = dataset.build_full_trainset()
     
@@ -166,30 +178,55 @@ def get_recommend(user_id):
         except Exception as e:
             print(f"协同过滤推荐出错: {e}")
 
-    # --- 阶段 2: 保底机制 (不足 9 个时启用) ---
-    # 如果协同过滤没算出结果，或者结果太少
+    # --- 阶段 2: 保底机制 (冷启动/不足 9 个时启用) ---
+    # 如果协同过滤没算出结果（比如新用户），或者结果太少，启用“热门 + 最新”混合推荐
     if len(final_results) < 9:
         need_count = 12 - len(final_results) # 努力补齐到 12 个
-        print(f"ℹ️ 协同过滤结果不足，补充 {need_count} 个最新商品")
+        print(f"ℹ️ 协同过滤结果不足，准备补充热门与最新商品共 {need_count} 个")
         
         # 排除掉 已经推荐的 和 已经买过的
         exclude_ids = list(interacted_items) + [x["product_id"] for x in final_results]
         
-        # 查询最新商品 (ID 倒序 = 最新录入)
-        # .filter(Product.id.notin_(exclude_ids)) 确保不重复
-        latest_products = Product.query.filter(Product.id.notin_(exclude_ids))\
-            .order_by(Product.id.desc())\
-            .limit(need_count).all()
+        # 1. 优先补充“全局热门商品” (占空缺名额的一半，比如缺12个则取6个)
+        hot_count = need_count // 2 + need_count % 2
+        added_hot = 0
+
+        # 直接利用前面算好的 global_behavior_df，计算全站每个商品的总交互分 (总分越高的越热门)
+        if global_behavior_df is not None and not global_behavior_df.empty:
+            pop_series = global_behavior_df.groupby("product_id")["score"].sum().sort_values(ascending=False)
+            hot_candidates = [pid for pid in pop_series.index if pid not in exclude_ids]
             
-        for p in latest_products:
-            final_results.append({
-                "product_id": p.id,
-                "name": p.name,
-                "price": float(p.price),
-                "image_url": p.image_url,
-                "reason": "新品推荐",
-                "type": "latest" # 标记为新品保底
-            })
+            for pid in hot_candidates[:hot_count]:
+                product_rows = products_df[products_df["product_id"] == pid]
+                if not product_rows.empty:
+                    row = product_rows.iloc[0]
+                    final_results.append({
+                        "product_id": int(pid),
+                        "name": row["name"],
+                        "price": float(row["price"]),
+                        "image_url": row["image_url"],
+                        "reason": "全站热卖",
+                        "type": "hot"
+                    })
+                    exclude_ids.append(pid)
+                    added_hot += 1
+        
+        # 2. 剩余的名额用“最新商品”补齐
+        remain_count = need_count - added_hot
+        if remain_count > 0:
+            latest_products = Product.query.filter(Product.id.notin_(exclude_ids))\
+                .order_by(Product.id.desc())\
+                .limit(remain_count).all()
+                
+            for p in latest_products:
+                final_results.append({
+                    "product_id": p.id,
+                    "name": p.name,
+                    "price": float(p.price),
+                    "image_url": p.image_url,
+                    "reason": "新品速递",
+                    "type": "latest"
+                })
             
     return jsonify({
         "code": 200,

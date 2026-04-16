@@ -25,6 +25,10 @@
             <el-icon><Star /></el-icon>
             <span>我的收藏</span>
           </el-menu-item>
+          <el-menu-item index="likes">
+            <el-icon><Pointer /></el-icon>
+            <span>我的点赞</span>
+          </el-menu-item>
         </el-menu>
     </el-col>
       <!-- 右侧：基本信息 -->
@@ -309,7 +313,7 @@
                   @click.stop="removeFavorite(item.id)"
                   :loading="loading[item.id]"
                 >
-                  取消
+                  取消收藏
                 </el-button>
                 <el-button 
                    type="primary" 
@@ -324,11 +328,70 @@
           </div>
       </div>
       
+        <!-- 右侧：我的点赞 -->
+        <div class="content-panel" v-show="activeMenu === 'likes'">
+            <div class="panel-header">
+              <h2>我的点赞</h2>
+              <span class="subtitle">您喜欢的精选商品</span>
+            </div>
+
+            <!-- 空状态 -->
+            <el-empty v-if="likesList.length === 0" description="暂无点赞商品" :image-size="120">
+              <el-button type="primary" @click="$router.push('/')">去逛逛</el-button>
+            </el-empty>
+
+            <!-- 商品网格 -->
+            <div v-else class="favorites-grid">
+              <div v-for="item in likesList" :key="item.id" class="favorite-item">
+                <!-- 图片区：带悬浮效果 -->
+                <div class="image-wrapper" @click="$router.push(`/product/${item.id}`)">
+                  <img :src="getProductImage(item)" class="product-image" />
+                  <div class="hover-overlay">
+                    <span class="view-txt">查看详情</span>
+                  </div>
+                </div>
+
+                <!-- 信息区 -->
+                <div class="product-info">
+                  <h3 class="product-title" :title="item.name">{{ item.name }}</h3>
+                  <div class="product-meta">
+                    <span class="product-price">¥{{ item.price }}</span>
+                    <!-- 点赞数量 -->
+                    <span class="stock-tag" style="background:#fef0f0;color:#f56c6c;border-radius:12px;padding:2px 8px;font-size:12px;">❤ {{ item.like_count || 0 }} 喜欢</span>
+                  </div>
+                </div>
+
+                <!-- 操作区 -->
+                <div class="action-bar">
+                  <el-button
+                    type="danger"
+                    plain
+                    size="small"
+                    :icon="Delete"
+                    class="action-btn"
+                    @click.stop="removeLike(item.id)"
+                    :loading="likeLoading[item.id]"
+                  >
+                    取消点赞
+                  </el-button>
+                  <el-button
+                     type="primary"
+                     size="small"
+                     class="action-btn"
+                     @click.stop="$router.push(`/product/${item.id}`)"
+                  >
+                     购买
+                  </el-button>
+                </div>
+              </div>
+            </div>
+        </div>
+
     </el-col>
     </el-row>
   </div>
 
-  <!-- 注册组件 -->
+    <!-- 注册组件 -->
   <ProductRecommendation />
 
   </template>
@@ -336,7 +399,7 @@
 <script setup>
 import { ref, onMounted,watch,computed } from 'vue'
 import { ElMessage , ElMessageBox,ElLoading } from 'element-plus'
-import { Star, User, Document, Location, } from '@element-plus/icons-vue'
+import { Star, User, Document, Location, Pointer, Delete } from '@element-plus/icons-vue'
 
 import OrderList from './OrderList.vue'
 
@@ -353,6 +416,10 @@ const store = useStore()
 // 添加收藏相关的响应式数据和函数：
 const favorites = ref([])
 const loading = ref({})
+
+// 添加点赞相关的响应式数据和函数：
+const likesList = ref([])
+const likeLoading = ref({})
 
 const activeMenu = ref('info') // 默认选中“基本信息”标签
 //地址编辑
@@ -804,6 +871,52 @@ const removeFavorite = async (productId) => {
   }
 }
 
+const fetchLikes = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('http://localhost:5000/api/user/likes', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      credentials: 'include'
+    })
+
+    if (!res.ok) {
+      throw new Error('获取点赞列表失败')
+    }
+    const data = await res.json()
+    likesList.value = data.items || []
+  } catch (error) {
+    console.error('获取点赞列表失败:', error)
+    ElMessage.error(error.message || '获取点赞信息出错')
+  }
+}
+
+const removeLike = async (productId) => {
+  try {
+    likeLoading.value[productId] = true
+    const token = localStorage.getItem('token')
+    const res = await fetch(`http://localhost:5000/api/products/${productId}/like`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (res.ok) {
+      ElMessage.success('已取消点赞')
+      fetchLikes()
+    }
+  } catch (error) {
+    console.error('取消点赞失败:', error)
+    ElMessage.error('取消点赞失败')
+  } finally {
+    likeLoading.value[productId] = false
+  }
+}
+
 const handlePageChange = (page) => {
   currentPage.value = page
   // 如果你需要根据页码重新获取数据，可以在这里调用相应的方法
@@ -837,6 +950,10 @@ watch(activeMenu, (newVal) => {
   if (newVal === 'favorites' || newVal === '/favorites') {
     console.log('触发获取收藏列表')
     fetchFavorites()
+  }
+  if (newVal === 'likes' || newVal === '/likes') {
+    console.log('触发获取点赞列表')
+    fetchLikes()
   }
 })
 

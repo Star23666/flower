@@ -1073,6 +1073,46 @@ def like_status(product_id):
     like_count = Like.query.filter_by(product_id=product_id).count()
     return jsonify({'liked': liked, 'like_count': like_count})
 
+# 获取用户点赞列表
+@api_bp.route('/api/user/likes', methods=['GET'])
+@jwt_required()
+def get_user_likes():
+    try:
+        user_id = get_jwt_identity()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+    
+        likes = Like.query.filter_by(user_id=user_id).order_by(Like.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        items = []
+        for like in likes.items:
+            product = Product.query.get(like.product_id)
+            if product:
+                items.append({
+                    "id": product.id,
+                    "name": product.name,
+                    "price": float(product.price),
+                    "stock": product.stock,
+                    "category_id": product.category_id,
+                    "description": product.description,
+                    "image_url": product.image_url,
+                    "target": product.target,
+                    "flower_language": getattr(product, "flower_language", None),
+                    "scene": getattr(product, "scene", None),
+                    "like_count": Like.query.filter_by(product_id=product.id).count()
+                })
+                
+        return jsonify({
+            'items': items,
+            'total': likes.total,
+            'pages': likes.pages,
+            'current_page': likes.page
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # 评论区
 # 获取商品评论
 @api_bp.route('/api/products/<int:product_id>/comments', methods=['GET'])
