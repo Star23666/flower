@@ -397,6 +397,7 @@
   </template>
   
 <script setup>
+/* eslint-disable */
 import { ref, onMounted,watch,computed } from 'vue'
 import { ElMessage , ElMessageBox,ElLoading } from 'element-plus'
 import { Star, User, Document, Location, Pointer, Delete } from '@element-plus/icons-vue'
@@ -656,10 +657,40 @@ function beforeAvatarUpload(rawFile) {
 
 const defaultAvatar = 'http://localhost:5000/static/uploads/avatars/default-avatar.jpg'
 function handleAvatarSuccess(response) {
-  userForm.value.avatar = 'http://localhost:5000' + response.url
-  ElMessage.success('头像上传成功')
-}
+  const newAvatarUrl = 'http://localhost:5000' + response.url
+  userForm.value.avatar = newAvatarUrl
+  ElMessage.success('头像图片上传成功')
 
+  // 立即自动保存该头像到后端，防止网页其他地方不同步
+  const token = localStorage.getItem('token')
+  const userId = userForm.value.id
+
+  if (userId) {
+    fetch(`http://localhost:5000/api/users/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ avatar: newAvatarUrl })
+    }).then(async res => {
+      if (res.ok) {
+        // 成功保存后，同步更新 Vuex 和 LocalStorage，保证网页导航栏左上角的头像立即刷新   
+        try {
+          const localUserStr = localStorage.getItem('user');
+          if (localUserStr) {
+            let storeUser = JSON.parse(localUserStr);
+            storeUser.avatar = newAvatarUrl;
+            localStorage.setItem('user', JSON.stringify(storeUser));
+            store.commit('setUser', storeUser);
+          }
+        } catch (e) {}
+      }
+    }).catch(err => {
+      console.error('自动保存头像失败', err)
+    })
+  }
+}
 function deleteAddress(row) {
   // 这里写删除逻辑，暂时可以先加提示
   // 你可以用 ElMessageBox.confirm 做二次确认
@@ -731,6 +762,17 @@ async function fetchUserProfile() {
     userForm.value.avatar = data.avatar // 头像
     userForm.value.password = ''
     userForm.value.balance = data.balance
+
+    try {
+      const localUserStr = localStorage.getItem('user');
+      if (localUserStr) {
+        let storeUser = JSON.parse(localUserStr);
+        storeUser.avatar = data.avatar;
+        storeUser.username = data.username;
+        localStorage.setItem('user', JSON.stringify(storeUser));
+        store.commit('setUser', storeUser);
+      }
+    } catch (e) {}
 
   } else {
     ElMessage.error('获取用户信息失败')
